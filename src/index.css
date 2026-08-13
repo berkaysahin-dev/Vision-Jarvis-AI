@@ -1,0 +1,424 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg-color: #050505;
+  --orb-color-idle: #2a2a35;
+  --orb-color-listening: #007aff;
+  --orb-color-processing: #34c759;
+  --orb-color-speaking: #ff9500;
+  --orb-color-error: #ff3b30;
+  --text-primary: rgba(255, 255, 255, 0.9);
+  --text-secondary: rgba(255, 255, 255, 0.5);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg-color);
+  color: var(--text-primary);
+  height: 100vh;
+  overflow: hidden;
+  user-select: none;
+}
+
+#root {
+  height: 100%;
+}
+
+/* Custom Titlebar */
+.titlebar {
+  -webkit-app-region: drag;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+}
+
+.titlebar-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.titlebar-controls {
+  -webkit-app-region: no-drag;
+  display: flex;
+  gap: 16px;
+}
+
+.titlebar-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  transition: all 0.2s ease;
+}
+
+.titlebar-btn:hover {
+  color: var(--text-primary);
+}
+
+.titlebar-btn.close:hover {
+  color: var(--orb-color-error);
+}
+
+/* App Container */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: relative;
+  background: radial-gradient(circle at 50% 50%, rgba(20,20,25,1) 0%, rgba(5,5,5,1) 100%);
+}
+
+.header {
+  position: absolute;
+  top: 36px; /* Below titlebar */
+  right: 16px;
+  z-index: 100;
+}
+
+/* Main Content Area */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding-bottom: 60px; /* Offset to visually center */
+}
+
+/* AI Presence Container */
+.ai-presence {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+}
+
+/* Orb Canvas Wrapper */
+.orb-container {
+  width: 320px;
+  height: 320px;
+  position: relative;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.orb-container:active {
+  transform: scale(0.95);
+}
+
+/* Status Typography */
+.status-text {
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  transition: color 0.3s;
+}
+
+.status-text.listening { color: var(--orb-color-listening); }
+.status-text.processing { color: var(--orb-color-processing); }
+.status-text.speaking { color: var(--text-primary); }
+.status-text.error { color: var(--orb-color-error); }
+
+/* Jarvis Response Typography */
+.jarvis-response-container {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  max-width: 600px;
+  text-align: center;
+}
+
+.jarvis-response {
+  font-size: 24px;
+  font-weight: 300;
+  line-height: 1.4;
+  color: var(--text-primary);
+  text-shadow: 0 4px 24px rgba(0,0,0,0.5);
+  margin: 0;
+}
+
+/* Settings Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* Right Chat Sidebar */
+.chat-sidebar {
+  width: 320px;
+  background: rgba(15, 15, 20, 0.8);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+  z-index: 90;
+}
+
+.chat-header {
+  padding: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-bubble {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 13px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.chat-bubble.user {
+  align-self: flex-end;
+  background: rgba(0, 122, 255, 0.2);
+  border: 1px solid rgba(0, 122, 255, 0.3);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.chat-bubble.model {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  border-bottom-left-radius: 4px;
+}
+
+.chat-input-container {
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  gap: 8px;
+}
+
+.chat-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 10px 14px;
+  border-radius: 100px;
+  color: white;
+  font-size: 13px;
+  outline: none;
+}
+
+.chat-input:focus {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.chat-send-btn {
+  background: white;
+  color: black;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.chat-send-btn:hover {
+  opacity: 0.9;
+}
+
+.modal-content {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 32px;
+  border-radius: 24px;
+  width: 90%;
+  max-width: 400px;
+}
+
+.input-field {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 12px 16px;
+  border-radius: 12px;
+  color: white;
+  margin-top: 8px;
+  font-family: inherit;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--text-secondary);
+}
+
+.save-btn {
+  width: 100%;
+  background: white;
+  color: black;
+  border: none;
+  padding: 14px;
+  border-radius: 12px;
+  font-weight: 600;
+  margin-top: 24px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.save-btn:hover {
+  opacity: 0.9;
+}
+
+/* Left Sidebar & Shaz Vision Branding */
+.left-sidebar {
+  width: 250px;
+  background: rgba(12, 12, 18, 0.85);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px;
+  box-sizing: border-box;
+  z-index: 90;
+  user-select: none;
+}
+
+.sidebar-brand {
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.1), rgba(0, 122, 255, 0.1));
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  padding: 14px;
+  border-radius: 16px;
+  cursor: pointer;
+  margin-bottom: 20px;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.sidebar-brand:hover {
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(0, 122, 255, 0.2));
+  border-color: rgba(0, 240, 255, 0.6);
+  transform: translateY(-1px);
+}
+
+.brand-badge {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #00f0ff;
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+}
+
+.brand-link {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.sidebar-section-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+  padding-left: 4px;
+}
+
+.sidebar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-btn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 10px 14px;
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.sidebar-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  transform: translateX(2px);
+}
+
+.btn-icon {
+  font-size: 14px;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  text-align: center;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.sidebar-footer:hover {
+  opacity: 0.9;
+}
+

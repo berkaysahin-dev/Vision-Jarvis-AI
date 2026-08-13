@@ -1,0 +1,228 @@
+const { app, BrowserWindow, ipcMain } = require('electron');
+const path = require('path');
+const http = require('http');
+const os = require('os');
+
+const isDev = process.env.NODE_ENV === 'development';
+
+let mainWindow;
+let qrToken = Math.random().toString(36).substring(2, 10);
+const PORT = 3001;
+
+function getLocalIp() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const net of interfaces[name]) {
+      if (net.family === 'IPv4' && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  return '127.0.0.1';
+}
+
+// Simple Mobile Web Server for QR Connection
+const server = http.createServer((req, res) => {
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  const token = url.searchParams.get('token');
+
+  if (url.pathname === '/api/command' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body);
+        if (mainWindow) {
+          mainWindow.webContents.send('mobile-command', data);
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        res.end(JSON.stringify({ status: 'ok' }));
+      } catch (e) {
+        res.writeHead(400);
+        res.end();
+      }
+    });
+    return;
+  }
+
+  // Serve simple Mobile Control Web App
+  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+  res.end(`
+    <!DOCTYPE html>
+    <html lang="tr">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>JARVIS Mobile Remote</title>
+      <style>
+        body { margin: 0; background: #0a0a0c; color: white; font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; padding: 20px; box-sizing: border-box; }
+        .card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 30px; border-radius: 24px; backdrop-filter: blur(20px); width: 100%; max-width: 360px; }
+        h1 { font-size: 24px; font-weight: 600; margin-bottom: 8px; letter-spacing: 2px; }
+        p { color: rgba(255,255,255,0.6); font-size: 14px; margin-bottom: 24px; }
+        input { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.4); color: white; font-size: 16px; box-sizing: border-box; margin-bottom: 12px; }
+        button { width: 100%; padding: 14px; border-radius: 12px; border: none; background: white; color: black; font-weight: 600; font-size: 16px; cursor: pointer; }
+        .status { margin-top: 16px; font-size: 12px; color: #34c759; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <h1>JARVIS</h1>
+        <p>Telefondan Komut Gönder</p>
+        <input type="text" id="cmd" placeholder="Komut yazın (örn: Merhaba)" />
+        <button onclick="sendCmd()">Gönder</button>
+        <div class="status" id="st">Bağlandı</div>
+      </div>
+      <script>
+        function sendCmd() {
+          const val = document.getElementById('cmd').value;
+          if (!val) return;
+          fetch('/api/command?token=${token}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: val })
+          }).then(() => {
+            document.getElementById('st').innerText = 'Komut gönderildi!';
+            document.getElementById('cmd').value = '';
+            setTimeout(() => document.getElementById('st').innerText = 'Bağlandı', 2000);
+          });
+        }
+      </script>
+    </body>
+    </html>
+  `);
+});
+
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`[Mobile Server] Running at http://${getLocalIp()}:${PORT}`);
+});
+
+function createWindow() {
+  mainWindow = new BrowserWindow({
+    width: 450,
+    height: 700,
+    minWidth: 350,
+    minHeight: 500,
+    frame: false,
+    backgroundColor: '#050505',
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+      webSecurity: false
+    },
+    icon: path.join(__dirname, 'icon.ico'),
+    titleBarStyle: 'hidden',
+  });
+
+  mainWindow.maximize();
+
+  if (isDev) {
+    mainWindow.loadURL('https://localhost:5173');
+  } else {
+    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+  }
+
+  // Handle window controls via IPC
+  ipcMain.on('window-minimize', () => mainWindow.minimize());
+  ipcMain.on('window-maximize', () => {
+    if (mainWindow.isMaximized()) mainWindow.unmaximize();
+    else mainWindow.maximize();
+  });
+  ipcMain.on('window-close', () => mainWindow.close());
+
+  // IPC for QR Mobile connection info
+  ipcMain.handle('get-qr-info', () => {
+    return {
+      ip: getLocalIp(),
+      port: PORT,
+      token: qrToken,
+      url: `http://${getLocalIp()}:${PORT}?token=${qrToken}`
+    };
+  });
+
+  // Local Memory Path
+  const memoryPath = path.join(app.getPath('userData'), 'jarvis_memory.json');
+
+  // Tool Execution IPC Handler
+  ipcMain.handle('execute-tool', async (event, { name, args }) => {
+    const { exec } = require('child_process');
+    const fs = require('fs');
+
+    console.log(`[Electron Tool] Executing ${name} with args:`, args);
+
+    if (name === 'open_app') {
+      const appName = (args.appName || '').toLowerCase();
+      let cmd = '';
+
+      if (appName.includes('chrome') || appName.includes('tarayıcı') || appName.includes('browser') || appName.includes('google') || appName.includes('internet')) {
+        cmd = 'start https://www.google.com';
+      } else if (appName.includes('youtube')) {
+        cmd = 'start https://www.youtube.com';
+      } else if (appName.includes('spotify')) {
+        cmd = 'start spotify';
+      } else if (appName.includes('code') || appName.includes('vscode')) {
+        cmd = 'code .';
+      } else if (appName.includes('notepad') || appName.includes('not defteri')) {
+        cmd = 'start notepad';
+      } else if (appName.includes('download') || appName.includes('indirilen')) {
+        cmd = 'explorer %userprofile%\\Downloads';
+      } else if (appName.includes('desktop') || appName.includes('masaüstü')) {
+        cmd = 'explorer %userprofile%\\Desktop';
+      } else if (appName.includes('calc') || appName.includes('hesap makinesi')) {
+        cmd = 'start calc';
+      } else {
+        cmd = `start ${appName}`;
+      }
+
+      return new Promise((resolve) => {
+        exec(cmd, (err) => {
+          if (err) resolve(`Tarayıcı / Uygulama başlatıldı.`);
+          else resolve(`${appName} başarıyla açıldı.`);
+        });
+      });
+    }
+
+    if (name === 'save_memory') {
+      try {
+        let memory = {};
+        if (fs.existsSync(memoryPath)) {
+          memory = JSON.parse(fs.readFileSync(memoryPath, 'utf-8'));
+        }
+        memory[args.key] = { value: args.value, timestamp: new Date().toISOString() };
+        fs.writeFileSync(memoryPath, JSON.stringify(memory, null, 2));
+        return `Hafızaya kaydedildi: ${args.key} = ${args.value}`;
+      } catch (e) {
+        return `Hafıza hatası: ${e.message}`;
+      }
+    }
+
+    if (name === 'get_memory') {
+      try {
+        if (!fs.existsSync(memoryPath)) return "Hafızada henüz kayıtlı bilgi yok.";
+        const memory = JSON.parse(fs.readFileSync(memoryPath, 'utf-8'));
+        return JSON.stringify(memory);
+      } catch (e) {
+        return "Hafıza okunamadı.";
+      }
+    }
+
+    return "Bilinmeyen sistem fonksiyonu.";
+  });
+
+  app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
+    event.preventDefault();
+    callback(true);
+  });
+}
+
+app.whenReady().then(() => {
+  createWindow();
+
+  app.on('activate', function () {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
+
+app.on('window-all-closed', function () {
+  if (process.platform !== 'darwin') app.quit();
+});
+
