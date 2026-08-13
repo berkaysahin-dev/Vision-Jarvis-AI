@@ -1,38 +1,45 @@
-# 🤖 JARVIS 2.0 — AI Desktop Voice & Vision Assistant
+# JARVIS 2.0 — AI Desktop Voice & Vision Assistant
 
-> **Powered by [Shaz Vision](https://shazvision.com)**
-
-JARVIS 2.0 is an advanced native Windows desktop AI assistant built with **Electron**, **React**, **Three.js**, and **Google Gemini API**. It features real-time voice interaction with automated Voice Activity Detection (VAD), system application control, live webcam vision analysis, and a remote mobile control web application.
+Powered by [Shaz Vision](https://shazvision.com)
 
 ---
 
-## ✨ Features
+## Overview
 
-- 🎤 **Real-time Voice Assistant (VAD)**: Hands-free voice recognition with automatic silence detection for instant responses.
-- ⚡ **System & Computer Control**: Launch Chrome/Browser, Spotify, VS Code, Notepad, Calculator, and local applications via voice or chat.
-- 👁️ **Camera & Vision Analysis**: Real-time webcam frame capture and multimodal visual scene analysis using Google Gemini.
-- 📱 **Mobile Remote Control**: Scan QR code to control JARVIS from your smartphone over local Wi-Fi network.
-- 🍎 **Apple macOS Glassmorphism UI**: Sleek, dark translucent glass interface designed following Apple Human Interface Guidelines with pure vector SVG icons.
-- 🔒 **Persistent Local Memory**: Secure local JSON storage for facts, user preferences, and persistent memory.
+JARVIS 2.0 is an advanced native Windows desktop AI assistant built with Electron, React, Three.js, and Google Gemini API. Designed around Apple Human Interface Guidelines, it features real-time voice interaction with Voice Activity Silence Detection (VAD), system application control, live webcam vision analysis, and a remote mobile control interface.
 
 ---
 
-## 💻 Tech Stack
+## Key Features
 
-- **Framework**: Electron + React (TypeScript) + Vite
-- **3D Graphics**: Three.js + React Three Fiber (Interactive AI Orb)
-- **AI Engine**: Google Gemini API (`gemini-3.6-flash` REST & `gemini-2.5-flash-native-audio-latest` Live WebSocket)
-- **Backend & Network**: Node.js `child_process` + Express (Mobile Remote Server)
+- **Real-Time Voice Intelligence (VAD)**: Hands-free voice recognition with automatic silence detection for instantaneous AI responses.
+- **System & Computer Control**: Launch Chrome/Browser, Spotify, VS Code, Notepad, Calculator, and custom local applications hands-free via natural language.
+- **Camera & Multimodal Vision**: Real-time webcam frame capture and visual scene analysis powered by Google Gemini.
+- **Mobile Remote Control**: QR-code instant mobile pairing for controlling JARVIS from your smartphone over a local network.
+- **Apple macOS Glassmorphism UI**: Translucent dark glass interface crafted with precision typography and SVG line vectors.
+- **Persistent Local Memory**: Secure local JSON storage for user preferences, facts, and persistent memory.
 
 ---
 
-## 🚀 Quick Start & Installation
+## Architecture & Technology Stack
+
+| Component | Technology |
+| :--- | :--- |
+| **Desktop Shell** | Electron (Windows Native) |
+| **Frontend UI** | React 18 (TypeScript) + Vite |
+| **3D Rendering** | Three.js + React Three Fiber |
+| **AI Models** | Google Gemini API (`gemini-3.6-flash` REST & `gemini-2.5-flash-native-audio-latest` Live WebSocket) |
+| **Remote Server** | Node.js Express + Custom Web Protocol |
+
+---
+
+## Quick Start & Installation
 
 ### Prerequisites
 
 - **Node.js**: v18.0.0 or higher
 - **npm**: v9.0.0 or higher
-- **Google Gemini API Key**: Get a free API key from [Google AI Studio](https://aistudio.google.com/)
+- **Google Gemini API Key**: Obtain a free key from [Google AI Studio](https://aistudio.google.com/)
 
 ### Installation Steps
 
@@ -52,32 +59,31 @@ JARVIS 2.0 is an advanced native Windows desktop AI assistant built with **Elect
    npm run dev
    ```
 
-4. **Run Production Desktop App**
-   Double-click `BASLAT.bat` on Windows or run:
+4. **Launch Production Desktop App**
+   Run the pre-configured executable runner on Windows:
    ```bash
-   npm run build
-   npx electron .
+   BASLAT.bat
    ```
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 1. Launch JARVIS 2.0.
-2. Enter your **Google Gemini API Key** in the Settings panel.
-3. Save settings to persist the configuration locally on your machine.
+2. Enter your **Google Gemini API Key** in the System Settings panel.
+3. Save settings to persist the configuration locally on your device.
 
 ---
 
-## 🌐 Brand & Support
+## Brand & Support
 
-Developed with ❤️ by **[Shaz Vision](https://shazvision.com)**.
+Developed and maintained by **[Shaz Vision](https://shazvision.com)**.
 
 - Website: [https://shazvision.com](https://shazvision.com)
 - Repository: [github.com/berkaysahin-dev/Vision-Jarvis-AI](https://github.com/berkaysahin-dev/Vision-Jarvis-AI)
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
