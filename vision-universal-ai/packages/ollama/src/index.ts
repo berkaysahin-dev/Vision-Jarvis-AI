@@ -3,6 +3,7 @@ import {
   type ProviderCapabilities,
   type ProviderConfig,
   type ChatOptions,
+  type ChatMessage,
   type AIResponse,
   type AIChunk,
   type ToolCall,
@@ -19,8 +20,8 @@ export interface OllamaProviderConfig extends ProviderConfig {
 }
 
 export class OllamaProvider implements AIProvider {
-  public readonly name = "ollama";
-  public readonly displayName = "Ollama (Local)";
+  public readonly name: string = "ollama";
+  public readonly displayName: string = "Ollama (Local)";
   public readonly defaultModel: string;
   public readonly capabilities: ProviderCapabilities = {
     chat: true,
@@ -49,7 +50,7 @@ export class OllamaProvider implements AIProvider {
     this.fetchFn = config.fetch || globalThis.fetch.bind(globalThis);
   }
 
-  private formatMessage(msg: ChatOptions["messages"] extends (infer M)[] ? M : never): any {
+  private formatMessage(msg: ChatMessage): any {
     let content = "";
     const images: string[] = [];
 
@@ -98,7 +99,7 @@ export class OllamaProvider implements AIProvider {
 
     if (options.messages) {
       for (const msg of options.messages) {
-        messages.push(this.formatMessage(msg as any));
+        messages.push(this.formatMessage(msg));
       }
     } else if (options.prompt) {
       messages.push({ role: "user", content: options.prompt });

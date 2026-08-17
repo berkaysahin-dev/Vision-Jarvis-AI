@@ -3,6 +3,7 @@ import {
   type ProviderCapabilities,
   type ProviderConfig,
   type ChatOptions,
+  type ChatContentPart,
   type AIResponse,
   type AIChunk,
   type ToolCall,
@@ -23,8 +24,8 @@ export interface AnthropicProviderConfig extends ProviderConfig {
 }
 
 export class AnthropicProvider implements AIProvider {
-  public readonly name = "anthropic";
-  public readonly displayName = "Anthropic Claude";
+  public readonly name: string = "anthropic";
+  public readonly displayName: string = "Anthropic Claude";
   public readonly defaultModel: string;
   public readonly capabilities: ProviderCapabilities = {
     chat: true,
@@ -67,7 +68,7 @@ export class AnthropicProvider implements AIProvider {
     }
   }
 
-  private formatContentParts(content: ChatOptions["messages"] extends (infer M)[] ? M["content"] : never): any[] {
+  private formatContentParts(content: string | ChatContentPart[]): any[] {
     if (typeof content === "string") {
       return [{ type: "text", text: content }];
     }

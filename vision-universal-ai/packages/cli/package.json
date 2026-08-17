@@ -9,8 +9,8 @@
   },
   "type": "module",
   "dependencies": {
-    "@vision-ai/core": "workspace:*",
-    "vision-universal-ai": "workspace:*"
+    "@vision-ai/core": "*",
+    "vision-universal-ai": "*"
   },
   "scripts": {
     "build": "tsc -b",

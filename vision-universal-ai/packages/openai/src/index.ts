@@ -3,6 +3,7 @@ import {
   type ProviderCapabilities,
   type ProviderConfig,
   type ChatOptions,
+  type ChatContentPart,
   type AIResponse,
   type AIChunk,
   type ToolCall,
@@ -28,8 +29,8 @@ export interface OpenAIProviderConfig extends ProviderConfig {
 }
 
 export class OpenAIProvider implements AIProvider {
-  public readonly name = "openai";
-  public readonly displayName = "OpenAI";
+  public readonly name: string = "openai";
+  public readonly displayName: string = "OpenAI";
   public readonly defaultModel: string;
   public readonly capabilities: ProviderCapabilities = {
     chat: true,
@@ -75,7 +76,7 @@ export class OpenAIProvider implements AIProvider {
     }
   }
 
-  protected formatContentParts(content: ChatOptions["messages"] extends (infer M)[] ? M["content"] : never): any {
+  protected formatContentParts(content: string | ChatContentPart[]): any {
     if (typeof content === "string") {
       return content;
     }

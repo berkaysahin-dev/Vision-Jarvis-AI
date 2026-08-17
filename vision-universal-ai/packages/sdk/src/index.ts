@@ -52,8 +52,10 @@ export class VisionAI extends CoreVisionAI {
     const targetProvider = options.provider?.toLowerCase();
     const providers = [...(options.providers || [])];
 
-    // If a specific provider was requested with an apiKey or config, instantiate its dedicated adapter
-    if (targetProvider) {
+    // If a specific provider was requested and not already provided in `options.providers`, instantiate its dedicated adapter
+    const alreadyHas = targetProvider ? providers.some((p) => p.name.toLowerCase() === targetProvider) : false;
+
+    if (targetProvider && !alreadyHas) {
       switch (targetProvider) {
         case "gemini":
           providers.push(createGemini({ apiKey: options.apiKey, baseUrl: options.baseUrl, defaultModel: options.defaultModel }));
@@ -84,7 +86,9 @@ export class VisionAI extends CoreVisionAI {
 
     // Determine auto fallback default provider if none specified
     let detectedDefault = options.provider;
-    if (!detectedDefault && typeof process !== "undefined" && process.env) {
+    if (!detectedDefault && providers.length > 0) {
+      detectedDefault = providers[0].name.toLowerCase();
+    } else if (!detectedDefault && typeof process !== "undefined" && process.env) {
       if (process.env.GEMINI_API_KEY) detectedDefault = "gemini";
       else if (process.env.OPENAI_API_KEY) detectedDefault = "openai";
       else if (process.env.ANTHROPIC_API_KEY) detectedDefault = "anthropic";

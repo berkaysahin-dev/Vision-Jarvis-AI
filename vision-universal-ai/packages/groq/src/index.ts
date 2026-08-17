@@ -4,8 +4,8 @@ import type { ProviderCapabilities } from "@vision-ai/core";
 export interface GroqProviderConfig extends OpenAIProviderConfig {}
 
 export class GroqProvider extends OpenAIProvider {
-  public override readonly name = "groq";
-  public override readonly displayName = "Groq";
+  public override readonly name: string = "groq";
+  public override readonly displayName: string = "Groq";
   public override readonly defaultModel: string;
   public override readonly capabilities: ProviderCapabilities = {
     chat: true,

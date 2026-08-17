@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
+import { Canvas } from '@react-three/fiber';
 import { Orb } from './components/Orb';
 import { useJarvis, type JarvisLanguage } from './hooks/useJarvis';
 
@@ -555,9 +556,13 @@ export function App() {
               onClick={handleOrbClick}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              style={{ cursor: 'pointer' }}
+              style={{ cursor: 'pointer', width: '280px', height: '280px' }}
             >
-              <Orb status={status} audioLevel={audioLevel} />
+              <Canvas camera={{ position: [0, 0, 3], fov: 45 }}>
+                <ambientLight intensity={0.5} />
+                <pointLight position={[10, 10, 10]} intensity={1} />
+                <Orb status={status} audioLevel={audioLevel} />
+              </Canvas>
             </motion.div>
             
             <div className="status-indicator">

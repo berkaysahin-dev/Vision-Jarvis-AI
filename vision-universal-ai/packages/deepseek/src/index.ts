@@ -5,8 +5,8 @@ import { parseSSEStream } from "@vision-ai/core";
 export interface DeepSeekProviderConfig extends OpenAIProviderConfig {}
 
 export class DeepSeekProvider extends OpenAIProvider {
-  public override readonly name = "deepseek";
-  public override readonly displayName = "DeepSeek";
+  public override readonly name: string = "deepseek";
+  public override readonly displayName: string = "DeepSeek";
   public override readonly defaultModel: string;
   public override readonly capabilities: ProviderCapabilities = {
     chat: true,

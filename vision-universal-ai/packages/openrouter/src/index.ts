@@ -7,8 +7,8 @@ export interface OpenRouterConfig extends OpenAIProviderConfig {
 }
 
 export class OpenRouterProvider extends OpenAIProvider {
-  public override readonly name = "openrouter";
-  public override readonly displayName = "OpenRouter";
+  public override readonly name: string = "openrouter";
+  public override readonly displayName: string = "OpenRouter";
   public override readonly defaultModel: string;
   public override readonly capabilities: ProviderCapabilities = {
     chat: true,

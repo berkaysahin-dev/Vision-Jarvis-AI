@@ -1,28 +1,82 @@
 import type { AIChunk, AIResponse, UsageInfo, FinishReason } from "../types/chat.js";
 
 /**
- * Universal Stream Wrapper providing convenient async iteration and conversion methods
+ * Universal Stream Wrapper providing convenient async iteration, caching, and conversion methods
  */
 export class AIStream implements AsyncIterable<AIChunk> {
-  private iteratorFactory: () => AsyncIterator<AIChunk>;
+  private source: AsyncIterable<AIChunk> | (() => AsyncIterator<AIChunk>);
   private provider: string;
   private model: string;
+  private cachedText = "";
+  private cachedChunks: AIChunk[] = [];
+  private isConsumed = false;
+  private finalResponseCache?: AIResponse;
 
   constructor(
     source: AsyncIterable<AIChunk> | (() => AsyncIterator<AIChunk>),
     meta: { provider: string; model: string }
   ) {
-    if (typeof source === "function") {
-      this.iteratorFactory = source;
-    } else {
-      this.iteratorFactory = () => source[Symbol.asyncIterator]();
-    }
+    this.source = source;
     this.provider = meta.provider;
     this.model = meta.model;
   }
 
-  [Symbol.asyncIterator](): AsyncIterator<AIChunk> {
-    return this.iteratorFactory();
+  async *[Symbol.asyncIterator](): AsyncIterator<AIChunk> {
+    if (this.isConsumed && this.cachedChunks.length > 0) {
+      for (const chunk of this.cachedChunks) {
+        yield chunk;
+      }
+      return;
+    }
+
+    const iterator = typeof this.source === "function"
+      ? this.source()
+      : this.source[Symbol.asyncIterator]();
+
+    let fullText = "";
+    let reasoningContent = "";
+    let finishReason: FinishReason = "stop";
+    let usage: UsageInfo | undefined;
+    let lastRaw: unknown;
+
+    try {
+      while (true) {
+        const { done, value } = await iterator.next();
+        if (done) break;
+
+        this.cachedChunks.push(value);
+
+        if (value.delta) {
+          fullText += value.delta;
+        } else if (value.text && value.text.length > fullText.length) {
+          fullText = value.text;
+        }
+        if (value.reasoningDelta) {
+          reasoningContent += value.reasoningDelta;
+        }
+        if (value.finishReason) {
+          finishReason = value.finishReason;
+        }
+        if (value.usage) {
+          usage = value.usage;
+        }
+        lastRaw = value.rawChunk;
+
+        yield value;
+      }
+    } finally {
+      this.isConsumed = true;
+      this.cachedText = fullText;
+      this.finalResponseCache = {
+        text: fullText,
+        reasoningContent: reasoningContent || undefined,
+        finishReason,
+        usage,
+        provider: this.provider,
+        model: this.model,
+        rawResponse: lastRaw
+      };
+    }
   }
 
   /**
@@ -40,54 +94,39 @@ export class AIStream implements AsyncIterable<AIChunk> {
    * Reads the entire stream until completion and returns the final full text
    */
   async getText(): Promise<string> {
-    let fullText = "";
+    if (this.isConsumed && this.cachedText) {
+      return this.cachedText;
+    }
+    let text = "";
     for await (const chunk of this) {
       if (chunk.delta) {
-        fullText += chunk.delta;
-      } else if (chunk.text && chunk.text.length > fullText.length) {
-        fullText = chunk.text;
+        text += chunk.delta;
+      } else if (chunk.text && chunk.text.length > text.length) {
+        text = chunk.text;
       }
     }
-    return fullText;
+    return text || this.cachedText;
   }
 
   /**
    * Reads stream to completion and aggregates all metadata into an AIResponse
    */
   async getFinalResponse(): Promise<AIResponse> {
-    let fullText = "";
-    let reasoningContent = "";
-    let finishReason: FinishReason = "stop";
-    let usage: UsageInfo | undefined;
-    let lastRaw: unknown;
-
-    for await (const chunk of this) {
-      if (chunk.delta) {
-        fullText += chunk.delta;
-      } else if (chunk.text) {
-        fullText = chunk.text;
-      }
-      if (chunk.reasoningDelta) {
-        reasoningContent += chunk.reasoningDelta;
-      }
-      if (chunk.finishReason) {
-        finishReason = chunk.finishReason;
-      }
-      if (chunk.usage) {
-        usage = chunk.usage;
-      }
-      lastRaw = chunk.rawChunk;
+    if (this.isConsumed && this.finalResponseCache) {
+      return this.finalResponseCache;
     }
-
-    return {
-      text: fullText,
-      reasoningContent: reasoningContent || undefined,
-      finishReason,
-      usage,
-      provider: this.provider,
-      model: this.model,
-      rawResponse: lastRaw
-    };
+    // Consume if not already consumed
+    for await (const _ of this) {
+      // iterate to end
+    }
+    return (
+      this.finalResponseCache || {
+        text: this.cachedText,
+        finishReason: "stop",
+        provider: this.provider,
+        model: this.model
+      }
+    );
   }
 
   /**
@@ -148,7 +187,7 @@ export class AIStream implements AsyncIterable<AIChunk> {
  * Creates an AIStream from any AsyncIterable<AIChunk>
  */
 export function createAIStream(
-  source: AsyncIterable<AIChunk>,
+  source: AsyncIterable<AIChunk> | (() => AsyncIterator<AIChunk>),
   meta: { provider: string; model: string }
 ): AIStream {
   return new AIStream(source, meta);

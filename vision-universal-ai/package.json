@@ -1,6 +1,7 @@
 {
   "name": "vision-universal-ai-monorepo",
   "version": "1.0.0",
+  "type": "module",
   "private": true,
   "description": "One SDK. Every AI. Enterprise-grade, production-ready Universal AI SDK for TypeScript and JavaScript.",
   "author": "Vision Universal AI Contributors",

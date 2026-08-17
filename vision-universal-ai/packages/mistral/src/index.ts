@@ -4,8 +4,8 @@ import type { ProviderCapabilities } from "@vision-ai/core";
 export interface MistralProviderConfig extends OpenAIProviderConfig {}
 
 export class MistralProvider extends OpenAIProvider {
-  public override readonly name = "mistral";
-  public override readonly displayName = "Mistral AI";
+  public override readonly name: string = "mistral";
+  public override readonly displayName: string = "Mistral AI";
   public override readonly defaultModel: string;
   public override readonly capabilities: ProviderCapabilities = {
     chat: true,

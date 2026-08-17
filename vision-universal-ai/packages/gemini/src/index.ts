@@ -3,6 +3,7 @@ import {
   type ProviderCapabilities,
   type ProviderConfig,
   type ChatOptions,
+  type ChatContentPart,
   type AIResponse,
   type AIChunk,
   type ToolCall,
@@ -25,8 +26,8 @@ export interface GeminiProviderConfig extends ProviderConfig {
 }
 
 export class GeminiProvider implements AIProvider {
-  public readonly name = "gemini";
-  public readonly displayName = "Google Gemini";
+  public readonly name: string = "gemini";
+  public readonly displayName: string = "Google Gemini";
   public readonly defaultModel: string;
   public readonly capabilities: ProviderCapabilities = {
     chat: true,
@@ -67,7 +68,7 @@ export class GeminiProvider implements AIProvider {
     }
   }
 
-  private formatContentParts(content: ChatOptions["messages"] extends (infer M)[] ? M["content"] : never): any[] {
+  private formatContentParts(content: string | ChatContentPart[]): any[] {
     if (typeof content === "string") {
       return [{ text: content }];
     }

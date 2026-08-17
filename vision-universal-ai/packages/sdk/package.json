@@ -14,15 +14,15 @@
     }
   },
   "dependencies": {
-    "@vision-ai/core": "workspace:*",
-    "@vision-ai/gemini": "workspace:*",
-    "@vision-ai/openai": "workspace:*",
-    "@vision-ai/anthropic": "workspace:*",
-    "@vision-ai/groq": "workspace:*",
-    "@vision-ai/deepseek": "workspace:*",
-    "@vision-ai/openrouter": "workspace:*",
-    "@vision-ai/ollama": "workspace:*",
-    "@vision-ai/mistral": "workspace:*"
+    "@vision-ai/core": "*",
+    "@vision-ai/gemini": "*",
+    "@vision-ai/openai": "*",
+    "@vision-ai/anthropic": "*",
+    "@vision-ai/groq": "*",
+    "@vision-ai/deepseek": "*",
+    "@vision-ai/openrouter": "*",
+    "@vision-ai/ollama": "*",
+    "@vision-ai/mistral": "*"
   },
   "scripts": {
     "build": "tsc -b",

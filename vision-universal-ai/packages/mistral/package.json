@@ -14,8 +14,8 @@
     }
   },
   "dependencies": {
-    "@vision-ai/core": "workspace:*",
-    "@vision-ai/openai": "workspace:*"
+    "@vision-ai/core": "*",
+    "@vision-ai/openai": "*"
   },
   "scripts": {
     "build": "tsc -b",
