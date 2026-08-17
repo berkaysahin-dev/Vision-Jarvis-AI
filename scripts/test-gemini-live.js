@@ -1,20 +1,17 @@
 import WebSocket from 'ws';
-import fs from 'fs';
 
-const configPath = 'C:\\Users\\BERKAY ŞAHİN\\Desktop\\Windows - JARVIS V3 - Açık Kaynak\\sistem\\config\\api_keys.json';
-let apiKey = '';
+const apiKey = process.env.GEMINI_API_KEY || process.argv[2];
 
-try {
-  const conf = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-  apiKey = conf.gemini_api_key;
-} catch (e) {
-  console.error('Config read error:', e);
+if (!apiKey) {
+  console.error('Error: GEMINI_API_KEY is not set. Provide it via environment variable or command line argument.');
+  console.log('Usage: node scripts/test-gemini-live.js <YOUR_GEMINI_API_KEY>');
+  process.exit(1);
 }
 
 console.log('[Gemini] API key detected');
 const LIVE_MODEL = 'gemini-2.5-flash-native-audio-latest';
-console.log(`[Gemini] Model: ${LIVE_MODEL}`);
-console.log('[Gemini] Connecting...');
+console.log(`[Gemini] Testing Model: ${LIVE_MODEL}`);
+console.log('[Gemini] Connecting to Live Bidi WebSocket...');
 
 const HOST = 'generativelanguage.googleapis.com';
 const WS_URL = `wss://${HOST}/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${apiKey}`;
@@ -37,7 +34,7 @@ ws.on('open', () => {
 ws.on('message', (data) => {
   const msg = JSON.parse(data.toString());
   if (msg.setupComplete) {
-    console.log('[Gemini] Connected successfully');
+    console.log('[Gemini] Live session connected successfully!');
     ws.close();
     process.exit(0);
   }

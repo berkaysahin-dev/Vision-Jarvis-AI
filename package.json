@@ -1,7 +1,30 @@
 {
   "name": "vision-jarvis",
-  "private": true,
-  "version": "0.0.0",
+  "version": "2.0.0",
+  "private": false,
+  "description": "JARVIS 2.0 - Native Desktop AI Voice & Vision Assistant powered by Google Gemini and Shaz Vision",
+  "author": "Berkay Şahin <berkay@shazvision.com> (https://shazvision.com)",
+  "license": "MIT",
+  "homepage": "https://shazvision.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/berkaysahin-dev/Vision-Jarvis-AI.git"
+  },
+  "bugs": {
+    "url": "https://github.com/berkaysahin-dev/Vision-Jarvis-AI/issues"
+  },
+  "keywords": [
+    "jarvis",
+    "ai",
+    "gemini",
+    "voice-assistant",
+    "electron",
+    "react",
+    "threejs",
+    "speech-to-text",
+    "desktop-assistant",
+    "shaz-vision"
+  ],
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
