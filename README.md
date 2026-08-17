@@ -4,6 +4,10 @@ Powered by [Shaz Vision](https://shazvision.com)
 
 ---
 
+![JARVIS 2.0 Desktop Interface](docs/preview.jpg)
+
+---
+
 ## Overview
 
 JARVIS 2.0 is an advanced native Windows desktop AI assistant built with Electron, React, Three.js, and Google Gemini API. Designed around Apple Human Interface Guidelines, it features real-time voice interaction with Voice Activity Silence Detection (VAD), system application control, live webcam vision analysis, and a remote mobile control interface.
