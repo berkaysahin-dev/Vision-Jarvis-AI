@@ -40,6 +40,10 @@ export default function App() {
     currentResponse,
     errorMessage,
     isMuted,
+    voicePitch,
+    setVoicePitch,
+    voiceRate,
+    setVoiceRate,
     toggleMute,
     startListening,
     stopListening,
@@ -61,15 +65,28 @@ export default function App() {
             sendTextMessage(data.text);
           }
         };
+        const handleTriggerListening = () => {
+          console.log('[JARVIS Global Hotkey Alt+Space Triggered]');
+          startListening();
+        };
+        const handleReminderTriggered = (_event: any, data: any) => {
+          console.log('[JARVIS Reminder Triggered]:', data);
+        };
+
         ipcRenderer.on('mobile-command', handleMobileCmd);
+        ipcRenderer.on('trigger-voice-listening', handleTriggerListening);
+        ipcRenderer.on('reminder-triggered', handleReminderTriggered);
+
         return () => {
           ipcRenderer.removeListener('mobile-command', handleMobileCmd);
+          ipcRenderer.removeListener('trigger-voice-listening', handleTriggerListening);
+          ipcRenderer.removeListener('reminder-triggered', handleReminderTriggered);
         };
       } catch (e) {
         console.error('IPC Listener Error:', e);
       }
     }
-  }, [sendTextMessage]);
+  }, [sendTextMessage, startListening]);
 
   const openExternalLink = (url: string) => {
     if (typeof window !== 'undefined' && (window as any).require) {
@@ -601,6 +618,36 @@ export default function App() {
                 <option value="tr-TR">Türkçe</option>
                 <option value="en-US">English</option>
               </select>
+            </div>
+
+            <div style={{ marginTop: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                <span>Ses Tonu (Pitch): {voicePitch.toFixed(2)}</span>
+              </div>
+              <input 
+                type="range" 
+                min="0.5" 
+                max="1.5" 
+                step="0.05" 
+                value={voicePitch} 
+                onChange={(e) => setVoicePitch(parseFloat(e.target.value))}
+                style={{ width: '100%', accentColor: '#00f0ff', cursor: 'pointer', marginTop: '6px' }}
+              />
+            </div>
+
+            <div style={{ marginTop: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                <span>Ses Hızı (Speed): {voiceRate.toFixed(2)}x</span>
+              </div>
+              <input 
+                type="range" 
+                min="0.5" 
+                max="1.5" 
+                step="0.05" 
+                value={voiceRate} 
+                onChange={(e) => setVoiceRate(parseFloat(e.target.value))}
+                style={{ width: '100%', accentColor: '#00f0ff', cursor: 'pointer', marginTop: '6px' }}
+              />
             </div>
 
             <button className="save-btn" onClick={handleSaveSettings}>

@@ -205,6 +205,61 @@ function createWindow() {
       }
     }
 
+    if (name === 'search_file') {
+      const fileName = (args.fileName || args.query || '').toLowerCase();
+      const targetFolder = (args.targetFolder || '').toLowerCase();
+      const userHome = app.getPath('home');
+
+      let searchPaths = [
+        path.join(userHome, 'Downloads'),
+        path.join(userHome, 'Desktop'),
+        path.join(userHome, 'Documents')
+      ];
+
+      if (targetFolder.includes('download') || targetFolder.includes('indirilen')) {
+        searchPaths = [path.join(userHome, 'Downloads')];
+      } else if (targetFolder.includes('desktop') || targetFolder.includes('masaüstü')) {
+        searchPaths = [path.join(userHome, 'Desktop')];
+      } else if (targetFolder.includes('document') || targetFolder.includes('belge')) {
+        searchPaths = [path.join(userHome, 'Documents')];
+      }
+
+      for (const dirPath of searchPaths) {
+        try {
+          if (fs.existsSync(dirPath)) {
+            const files = fs.readdirSync(dirPath);
+            const found = files.find(f => f.toLowerCase().includes(fileName));
+            if (found) {
+              const fullPath = path.join(dirPath, found);
+              exec(`start "" "${fullPath}"`);
+              return `${found} dosyası bulundu ve açıldı.`;
+            }
+          }
+        } catch(e) {}
+      }
+      return `${fileName} adlı dosya veya klasör bulunamadı.`;
+    }
+
+    if (name === 'set_reminder') {
+      const title = args.title || 'Anımsatıcı';
+      const delaySeconds = parseInt(args.delaySeconds || 10, 10);
+
+      setTimeout(() => {
+        const { Notification } = require('electron');
+        if (Notification.isSupported()) {
+          new Notification({
+            title: '🤖 JARVIS Anımsatıcı',
+            body: title
+          }).show();
+        }
+        if (mainWindow) {
+          mainWindow.webContents.send('reminder-triggered', { title });
+        }
+      }, delaySeconds * 1000);
+
+      return `Zamanlayıcı ayarlandı: ${delaySeconds} saniye sonra "${title}" hatırlatılacak.`;
+    }
+
     return "Bilinmeyen sistem fonksiyonu.";
   });
 
@@ -217,9 +272,25 @@ function createWindow() {
 app.whenReady().then(() => {
   createWindow();
 
+  // Register Global Hotkey (Alt+Space)
+  const { globalShortcut } = require('electron');
+  globalShortcut.register('Alt+Space', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+      mainWindow.webContents.send('trigger-voice-listening');
+    }
+  });
+
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+});
+
+app.on('will-quit', () => {
+  const { globalShortcut } = require('electron');
+  globalShortcut.unregisterAll();
 });
 
 app.on('window-all-closed', function () {

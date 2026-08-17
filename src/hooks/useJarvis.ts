@@ -17,6 +17,27 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
   const [errorMessage, setErrorMessage] = useState('');
   const [isMuted, setIsMuted] = useState(false);
 
+  // Voice Customization (Pitch & Rate)
+  const [voicePitch, setVoicePitchState] = useState<number>(() => {
+    const saved = localStorage.getItem('jarvis_voice_pitch');
+    return saved ? parseFloat(saved) : 0.95;
+  });
+
+  const [voiceRate, setVoiceRateState] = useState<number>(() => {
+    const saved = localStorage.getItem('jarvis_voice_rate');
+    return saved ? parseFloat(saved) : 1.0;
+  });
+
+  const setVoicePitch = (val: number) => {
+    setVoicePitchState(val);
+    localStorage.setItem('jarvis_voice_pitch', val.toString());
+  };
+
+  const setVoiceRate = (val: number) => {
+    setVoiceRateState(val);
+    localStorage.setItem('jarvis_voice_rate', val.toString());
+  };
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<BlobPart[]>([]);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -272,6 +293,8 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
 
   const checkForSystemCommands = async (text: string) => {
     const lower = text.toLowerCase();
+    
+    // Application Opening Triggers
     if (lower.includes('chrome') || lower.includes('tarayıcı') || lower.includes('browser') || lower.includes('google') || lower.includes('internet')) {
       await executeSystemTool('open_app', { appName: 'chrome' });
     } else if (lower.includes('youtube')) {
@@ -285,6 +308,34 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
     } else if (lower.includes('vscode') || lower.includes('code aç')) {
       await executeSystemTool('open_app', { appName: 'code' });
     }
+
+    // Hands-Free File / Folder Search Triggers
+    if (lower.includes('dosyasını aç') || lower.includes('klasörünü aç') || lower.includes('indirilenlerdeki') || lower.includes('masaüstündeki') || lower.includes('belgelerdeki')) {
+      let targetFolder = '';
+      if (lower.includes('indirilen')) targetFolder = 'downloads';
+      else if (lower.includes('masaüstü')) targetFolder = 'desktop';
+      else if (lower.includes('belge')) targetFolder = 'documents';
+
+      // Extract search term
+      const words = lower.split(' ');
+      const query = words.find(w => w.length > 3 && !['aç', 'dosyasını', 'klasörünü', 'indirilenlerdeki', 'masaüstündeki', 'belgelerdeki'].includes(w)) || '';
+      if (query) {
+        await executeSystemTool('search_file', { fileName: query, targetFolder });
+      }
+    }
+
+    // Smart Voice Reminder & Timer Triggers
+    if (lower.includes('hatırlat') || lower.includes('zamanlayıcı')) {
+      let delaySeconds = 10;
+      const secMatch = lower.match(/(\d+)\s*saniye/);
+      const minMatch = lower.match(/(\d+)\s*dakika/);
+
+      if (secMatch) delaySeconds = parseInt(secMatch[1], 10);
+      else if (minMatch) delaySeconds = parseInt(minMatch[1], 10) * 60;
+
+      const title = text.replace(/(\d+)\s*(saniye|dakika)\s*sonra/gi, '').replace(/(hatırlat|zamanlayıcı)/gi, '').trim() || 'Hatırlatma';
+      await executeSystemTool('set_reminder', { title, delaySeconds });
+    }
   };
 
   const sendAudioToGemini = async (base64Audio: string, mimeType: string) => {
@@ -293,7 +344,7 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
 
     try {
       const sysInstruction = language === 'tr-TR' 
-        ? "Sen JARVIS adında gelişmiş bir yapay zeka asistanısın. Kullanıcının bilgisayarında tarayıcı ve uygulama açma yetkin VARDIR. Tarayıcı istendiğinde açtığını söyle. Yanıtların Türkçe, doğal, akıcı ve kısa olmalı."
+        ? "Sen JARVIS adında gelişmiş bir yapay zeka asistanısın. Kullanıcının bilgisayarında tarayıcı, uygulama açma, dosya arama ve zamanlayıcı başlatma yetkin VARDIR. Yanıtların Türkçe, doğal, akıcı ve kısa olmalı."
         : "You are JARVIS, an advanced AI assistant. Your responses should be natural, intelligent, and concise.";
 
       // Standardize mimeType string for Gemini API (e.g. "audio/webm;codecs=opus" -> "audio/webm")
@@ -338,7 +389,7 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
 
     try {
       const sysInstruction = language === 'tr-TR' 
-        ? "Sen JARVIS adında gelişmiş bir yapay zeka asistanısın. Kullanıcının bilgisayarında tarayıcı ve uygulama açma yetkin VARDIR. Tarayıcı istendiğinde açtığını söyle. Yanıtların Türkçe, doğal, akıcı ve kısa olmalı."
+        ? "Sen JARVIS adında gelişmiş bir yapay zeka asistanısın. Kullanıcının bilgisayarında tarayıcı, uygulama açma, dosya arama ve zamanlayıcı başlatma yetkin VARDIR. Yanıtların Türkçe, doğal, akıcı ve kısa olmalı."
         : "You are JARVIS. Respond intelligently and concisely.";
 
       const parts = [{ text: text }];
@@ -396,8 +447,8 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = language;
-      utterance.pitch = 0.92;
-      utterance.rate = 1.02;
+      utterance.pitch = voicePitch;
+      utterance.rate = voiceRate;
 
       const voices = window.speechSynthesis.getVoices();
       const preferredVoice = voices.find(v => 
@@ -423,6 +474,10 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
     currentResponse,
     errorMessage,
     isMuted,
+    voicePitch,
+    setVoicePitch,
+    voiceRate,
+    setVoiceRate,
     toggleMute,
     startListening,
     stopListening,

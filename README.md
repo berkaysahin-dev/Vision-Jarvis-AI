@@ -12,10 +12,10 @@ JARVIS 2.0 is an advanced native Windows desktop AI assistant built with Electro
 
 ## Key Features
 
-- **Real-Time Voice Intelligence (VAD)**: Hands-free voice recognition with automatic silence detection for instantaneous AI responses.
-- **System & Computer Control**: Launch Chrome/Browser, Spotify, VS Code, Notepad, Calculator, and custom local applications hands-free via natural language.
-- **Camera & Multimodal Vision**: Real-time webcam frame capture and visual scene analysis powered by Google Gemini.
-- **Mobile Remote Control**: QR-code instant mobile pairing for controlling JARVIS from your smartphone over a local network.
+- **Global Desktop Hotkey (`Alt + Space`)**: Instantly summon JARVIS from any Windows application to start voice listening.
+- **Voice Pitch & Speed Customizer**: Fine-tune AI voice pitch and speech speed sliders in System Settings.
+- **Hands-Free File & Folder Search**: Search and open files or folders in Downloads, Desktop, and Documents using natural language.
+- **Smart Voice Reminders & Timers**: Schedule background countdown timers and trigger native Windows OS desktop notifications.
 - **Apple macOS Glassmorphism UI**: Translucent dark glass interface crafted with precision typography and SVG line vectors.
 - **Persistent Local Memory**: Secure local JSON storage for user preferences, facts, and persistent memory.
 
