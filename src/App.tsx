@@ -39,6 +39,8 @@ export default function App() {
     conversation,
     currentResponse,
     errorMessage,
+    isMuted,
+    toggleMute,
     startListening,
     stopListening,
     sendTextMessage,
@@ -189,6 +191,30 @@ export default function App() {
       </div>
 
       <header className="header" style={{ display: 'flex', gap: '12px', right: showChat ? '350px' : '16px', transition: 'right 0.3s ease', zIndex: 100 }}>
+        {/* Microphone Toggle Mute Button */}
+        <button 
+          onClick={toggleMute}
+          title={isMuted ? "Mikrofonu Aç" : "Mikrofonu Kapat"}
+          style={{ 
+            background: isMuted ? 'rgba(255, 59, 48, 0.15)' : 'none', 
+            border: isMuted ? '1px solid rgba(255, 59, 48, 0.4)' : 'none', 
+            borderRadius: '50%',
+            padding: '4px',
+            color: isMuted ? '#ff3b30' : 'var(--text-secondary)', 
+            cursor: 'pointer', 
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          {isMuted ? (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+          ) : (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+          )}
+        </button>
+
         {/* Toggle Right Chat Panel */}
         <button 
           onClick={() => setShowChat(!showChat)}
@@ -323,6 +349,20 @@ export default function App() {
 
           <div className="sidebar-section-title" style={{ marginTop: '20px' }}>Araçlar</div>
           <div className="sidebar-actions">
+            <button 
+              className="sidebar-btn" 
+              onClick={toggleMute}
+              style={{ color: isMuted ? '#ff3b30' : 'rgba(255, 255, 255, 0.85)' }}
+            >
+              <span className="btn-icon" style={{ color: isMuted ? '#ff3b30' : undefined }}>
+                {isMuted ? (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                ) : (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                )}
+              </span>
+              {isMuted ? 'Mikrofonu Aç' : 'Mikrofonu Kapat'}
+            </button>
             <button className="sidebar-btn" onClick={handleToggleCamera}>
               <span className="btn-icon">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>

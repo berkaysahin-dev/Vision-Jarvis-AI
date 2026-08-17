@@ -15,6 +15,7 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
   const [conversation, setConversation] = useState<Message[]>([]);
   const [currentResponse, setCurrentResponse] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [isMuted, setIsMuted] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<BlobPart[]>([]);
@@ -25,6 +26,16 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
   const hasSpokenRef = useRef(false);
   const lastSoundTimeRef = useRef<number>(0);
   const isStoppingRef = useRef(false);
+
+  const toggleMute = () => {
+    setIsMuted(prev => {
+      const next = !prev;
+      if (next && status === 'listening') {
+        stopListening();
+      }
+      return next;
+    });
+  };
 
   const playSoundEffect = (type: 'start' | 'stop') => {
     try {
@@ -127,6 +138,12 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
   const startListening = async () => {
     if (!apiKey) {
       setErrorMessage(language === 'tr-TR' ? 'Lütfen önce API anahtarını girin.' : 'Please enter API key first.');
+      setStatus('error');
+      return;
+    }
+
+    if (isMuted) {
+      setErrorMessage(language === 'tr-TR' ? 'Mikrofon kapalı (Sessizde). Lütfen önce mikrofonu açın.' : 'Microphone is muted.');
       setStatus('error');
       return;
     }
@@ -279,9 +296,12 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
         ? "Sen JARVIS adında gelişmiş bir yapay zeka asistanısın. Kullanıcının bilgisayarında tarayıcı ve uygulama açma yetkin VARDIR. Tarayıcı istendiğinde açtığını söyle. Yanıtların Türkçe, doğal, akıcı ve kısa olmalı."
         : "You are JARVIS, an advanced AI assistant. Your responses should be natural, intelligent, and concise.";
 
+      // Standardize mimeType string for Gemini API (e.g. "audio/webm;codecs=opus" -> "audio/webm")
+      const cleanMime = (mimeType || 'audio/webm').split(';')[0];
+
       const parts = [
         { text: "Ses kaydımı dinle, isteğimi yerine getir ve Türkçe yanıtla." },
-        { inline_data: { mime_type: mimeType, data: base64Audio } }
+        { inline_data: { mime_type: cleanMime, data: base64Audio } }
       ];
 
       const rawText = await callGeminiREST(parts, sysInstruction);
@@ -380,7 +400,6 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
       utterance.rate = 1.02;
 
       const voices = window.speechSynthesis.getVoices();
-      // Select best male or Google/Microsoft natural voice
       const preferredVoice = voices.find(v => 
         v.lang.startsWith('tr') && (v.name.includes('Google') || v.name.includes('Tolga') || v.name.includes('Natural') || v.name.includes('Male'))
       ) || voices.find(v => v.lang.startsWith('tr'));
@@ -403,6 +422,8 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
     conversation,
     currentResponse,
     errorMessage,
+    isMuted,
+    toggleMute,
     startListening,
     stopListening,
     sendTextMessage,
