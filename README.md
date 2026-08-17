@@ -5,7 +5,7 @@ Powered by [Shaz Vision](https://shazvision.com)
 ---
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/berkaysahin-dev/Vision-Jarvis-AI/master/docs/preview.jpg" alt="JARVIS 2.0 Desktop Interface" width="100%" style="border-radius: 12px;" />
+  <img src="https://raw.githubusercontent.com/berkaysahin-dev/Vision-Jarvis-AI/main/docs/preview.jpg" alt="JARVIS 2.0 Desktop Interface" width="100%" style="border-radius: 12px;" />
 </p>
 
 ---
