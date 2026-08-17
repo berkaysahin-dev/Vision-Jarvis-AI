@@ -1,21 +1,27 @@
 import { useState, useEffect, useRef } from 'react';
-import { Canvas } from '@react-three/fiber';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
-import { useJarvis } from './hooks/useJarvis';
 import { Orb } from './components/Orb';
+import { useJarvis, type JarvisLanguage } from './hooks/useJarvis';
 
-export type JarvisLanguage = 'tr-TR' | 'en-US';
-
-export default function App() {
+export function App() {
   const [apiKey, setApiKey] = useState('');
+  const [language, setLanguage] = useState<JarvisLanguage>('tr-TR');
   const [showSettings, setShowSettings] = useState(true);
   const [showQR, setShowQR] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
   const [showChat, setShowChat] = useState(true);
+  const [qrData, setQrData] = useState<{ url: string; ip: string; port: number } | null>(null);
   const [textInput, setTextInput] = useState('');
-  const [qrData, setQrData] = useState<{ ip: string; port: number; token: string; url: string } | null>(null);
-  const [language, setLanguage] = useState<JarvisLanguage>('tr-TR');
+  const [notes, setNotes] = useState<{ id: string; text: string; date: string }[]>([]);
+  const [newNoteText, setNewNoteText] = useState('');
+  const [systemStats, setSystemStats] = useState<{ cpuUsage: number; memUsage: number; usedMemGB: string; totalMemGB: string }>({
+    cpuUsage: 12,
+    memUsage: 45,
+    usedMemGB: '7.2',
+    totalMemGB: '16.0'
+  });
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -55,20 +61,24 @@ export default function App() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversation, currentResponse]);
 
+  // IPC Event Listeners & System Stats Polling
   useEffect(() => {
     if (typeof window !== 'undefined' && (window as any).require) {
       try {
         const { ipcRenderer } = (window as any).require('electron');
+        
         const handleMobileCmd = (_event: any, data: any) => {
           if (data && data.text) {
             console.log('[JARVIS Mobile Command Received]:', data.text);
             sendTextMessage(data.text);
           }
         };
+
         const handleTriggerListening = () => {
           console.log('[JARVIS Global Hotkey Alt+Space Triggered]');
           startListening();
         };
+
         const handleReminderTriggered = (_event: any, data: any) => {
           console.log('[JARVIS Reminder Triggered]:', data);
         };
@@ -77,10 +87,21 @@ export default function App() {
         ipcRenderer.on('trigger-voice-listening', handleTriggerListening);
         ipcRenderer.on('reminder-triggered', handleReminderTriggered);
 
+        // Fetch System Stats periodically
+        const fetchStats = async () => {
+          try {
+            const stats = await ipcRenderer.invoke('get-system-stats');
+            if (stats) setSystemStats(stats);
+          } catch(e) {}
+        };
+        fetchStats();
+        const interval = setInterval(fetchStats, 3000);
+
         return () => {
           ipcRenderer.removeListener('mobile-command', handleMobileCmd);
           ipcRenderer.removeListener('trigger-voice-listening', handleTriggerListening);
           ipcRenderer.removeListener('reminder-triggered', handleReminderTriggered);
+          clearInterval(interval);
         };
       } catch (e) {
         console.error('IPC Listener Error:', e);
@@ -166,10 +187,67 @@ export default function App() {
     }
   };
 
+  const handleAnalyzeScreen = async () => {
+    if (typeof window !== 'undefined' && (window as any).require) {
+      try {
+        const { ipcRenderer } = (window as any).require('electron');
+        const dataUrl = await ipcRenderer.invoke('capture-screen');
+        if (dataUrl) {
+          const base64 = dataUrl.split(',')[1];
+          sendImageToGemini(base64, "Ekranımdaki bu anlık görüntüyü, kodları, görselleri ve yazıları Türkçe detaylıca incele ve çözüm sun.");
+        }
+      } catch (e) {
+        console.error('Screen capture error:', e);
+      }
+    }
+  };
+
+  const handleMediaControl = async (action: string) => {
+    if (typeof window !== 'undefined' && (window as any).require) {
+      try {
+        const { ipcRenderer } = (window as any).require('electron');
+        await ipcRenderer.invoke('execute-tool', { name: 'control_media', args: { action } });
+      } catch(e) {}
+    }
+  };
+
+  const handleLoadNotes = async () => {
+    setShowNotes(true);
+    if (typeof window !== 'undefined' && (window as any).require) {
+      try {
+        const { ipcRenderer } = (window as any).require('electron');
+        const notesJson = await ipcRenderer.invoke('execute-tool', { name: 'get_notes', args: {} });
+        if (notesJson) setNotes(JSON.parse(notesJson));
+      } catch(e) {}
+    }
+  };
+
+  const handleAddNote = async () => {
+    if (!newNoteText.trim()) return;
+    if (typeof window !== 'undefined' && (window as any).require) {
+      try {
+        const { ipcRenderer } = (window as any).require('electron');
+        await ipcRenderer.invoke('execute-tool', { name: 'save_note', args: { text: newNoteText } });
+        setNewNoteText('');
+        handleLoadNotes();
+      } catch(e) {}
+    }
+  };
+
+  const handleDeleteNote = async (id: string) => {
+    if (typeof window !== 'undefined' && (window as any).require) {
+      try {
+        const { ipcRenderer } = (window as any).require('electron');
+        await ipcRenderer.invoke('execute-tool', { name: 'delete_note', args: { id } });
+        handleLoadNotes();
+      } catch(e) {}
+    }
+  };
+
   const handleOrbClick = () => {
     if (status === 'listening') {
       stopListening();
-    } else if (status === 'idle' || status === 'error') {
+    } else {
       startListening();
     }
   };
@@ -186,7 +264,7 @@ export default function App() {
     if (status === 'processing') return language === 'tr-TR' ? 'Düşünüyorum...' : 'Thinking...';
     if (status === 'speaking') return language === 'tr-TR' ? 'Konuşuyorum...' : 'Speaking...';
     if (status === 'error') return language === 'tr-TR' ? 'Hata' : 'Error';
-    return language === 'tr-TR' ? 'Konuşmak için dokun' : 'Tap to speak';
+    return language === 'tr-TR' ? 'Konuşmak için dokun (veya Alt+Space)' : 'Tap to speak (or Alt+Space)';
   };
 
   return (
@@ -230,6 +308,17 @@ export default function App() {
           ) : (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
           )}
+        </button>
+
+        {/* Screen Capture & Vision Button */}
+        <button 
+          onClick={handleAnalyzeScreen}
+          title="Ekranı İncele (Vision)"
+          style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', transition: 'color 0.2s' }}
+          onMouseOver={(e) => e.currentTarget.style.color = '#00f0ff'}
+          onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
         </button>
 
         {/* Toggle Right Chat Panel */}
@@ -284,6 +373,7 @@ export default function App() {
           </svg>
         </button>
       </header>
+
       <AnimatePresence>
         {errorMessage && (
           <motion.div 
@@ -330,6 +420,26 @@ export default function App() {
             </div>
           </div>
 
+          {/* System Performance Gauge Widget */}
+          <div className="sidebar-section-title">Sistem Performansı</div>
+          <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+              <span>CPU Kullanımı</span>
+              <span style={{ color: '#00f0ff', fontWeight: 600 }}>{systemStats.cpuUsage}%</span>
+            </div>
+            <div style={{ background: 'rgba(255, 255, 255, 0.1)', height: '4px', borderRadius: '2px', overflow: 'hidden', marginBottom: '10px' }}>
+              <div style={{ width: `${systemStats.cpuUsage}%`, background: '#00f0ff', height: '100%', transition: 'width 0.5s ease' }} />
+            </div>
+
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+              <span>RAM ({systemStats.usedMemGB} / {systemStats.totalMemGB} GB)</span>
+              <span style={{ color: '#30d158', fontWeight: 600 }}>{systemStats.memUsage}%</span>
+            </div>
+            <div style={{ background: 'rgba(255, 255, 255, 0.1)', height: '4px', borderRadius: '2px', overflow: 'hidden' }}>
+              <div style={{ width: `${systemStats.memUsage}%`, background: '#30d158', height: '100%', transition: 'width 0.5s ease' }} />
+            </div>
+          </div>
+
           <div className="sidebar-section-title">Uygulamalar</div>
           <div className="sidebar-actions">
             <button className="sidebar-btn" onClick={() => sendTextMessage("Tarayıcıyı aç")}>
@@ -364,7 +474,24 @@ export default function App() {
             </button>
           </div>
 
-          <div className="sidebar-section-title" style={{ marginTop: '20px' }}>Araçlar</div>
+          {/* Media Player Controls */}
+          <div className="sidebar-section-title" style={{ marginTop: '16px' }}>Medya Kontrolü</div>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+            <button className="sidebar-btn" onClick={() => handleMediaControl('playpause')} title="Oynat / Durdur" style={{ flex: 1, justifyContent: 'center' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            </button>
+            <button className="sidebar-btn" onClick={() => handleMediaControl('next')} title="Sonraki Şarkı" style={{ flex: 1, justifyContent: 'center' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+            </button>
+            <button className="sidebar-btn" onClick={() => handleMediaControl('volup')} title="Sesi Yükselt" style={{ flex: 1, justifyContent: 'center' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+            </button>
+            <button className="sidebar-btn" onClick={() => handleMediaControl('voldown')} title="Sesi Kıs" style={{ flex: 1, justifyContent: 'center' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon></svg>
+            </button>
+          </div>
+
+          <div className="sidebar-section-title" style={{ marginTop: '16px' }}>Araçlar</div>
           <div className="sidebar-actions">
             <button 
               className="sidebar-btn" 
@@ -380,6 +507,18 @@ export default function App() {
               </span>
               {isMuted ? 'Mikrofonu Aç' : 'Mikrofonu Kapat'}
             </button>
+            <button className="sidebar-btn" onClick={handleAnalyzeScreen}>
+              <span className="btn-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+              </span>
+              Ekran Analizi (Vision)
+            </button>
+            <button className="sidebar-btn" onClick={handleLoadNotes}>
+              <span className="btn-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              </span>
+              Sesli Notlarım
+            </button>
             <button className="sidebar-btn" onClick={handleToggleCamera}>
               <span className="btn-icon">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
@@ -390,7 +529,7 @@ export default function App() {
               <span className="btn-icon">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
               </span>
-              Mobil Uzaktan Kumanda
+              Mobil Remote
             </button>
             <button className="sidebar-btn" onClick={() => setShowSettings(true)}>
               <span className="btn-icon">
@@ -414,76 +553,33 @@ export default function App() {
             <motion.div 
               className="orb-container"
               onClick={handleOrbClick}
-              animate={{ scale: status === 'listening' ? 1.05 : 1 }}
-              transition={{ type: "spring", stiffness: 200, damping: 20 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              style={{ cursor: 'pointer' }}
             >
-              <Canvas camera={{ position: [0, 0, 5], fov: 45 }}>
-                <ambientLight intensity={0.5} />
-                <pointLight position={[10, 10, 10]} intensity={1} />
-                <Orb status={status} audioLevel={audioLevel} />
-              </Canvas>
+              <Orb status={status} audioLevel={audioLevel} />
             </motion.div>
-
-            <motion.div 
-              className={`status-text ${status}`}
-              animate={{ opacity: [0.7, 1, 0.7] }}
-              transition={{ repeat: Infinity, duration: status === 'idle' ? 3 : 1 }}
-              style={{ marginTop: '16px' }}
-            >
-              {getStatusText()}
-            </motion.div>
-
-            {/* Welcome Message directly below status-text inside flex container */}
-            {status === 'idle' && conversation.length === 0 && !currentResponse && (
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                style={{ marginTop: '24px', textAlign: 'center', pointerEvents: 'none' }}
-              >
-                <p className="jarvis-response" style={{ opacity: 0.7, fontSize: '18px', margin: 0, lineHeight: 1.4 }}>
-                  {language === 'tr-TR' ? (
-                    <>
-                      {new Date().getHours() < 12 ? 'Günaydın.' : new Date().getHours() < 18 ? 'İyi günler.' : 'İyi akşamlar.'}
-                      <br/>Nasıl yardımcı olabilirim?
-                    </>
-                  ) : (
-                    <>
-                      {new Date().getHours() < 12 ? 'Good morning.' : new Date().getHours() < 18 ? 'Good afternoon.' : 'Good evening.'}
-                      <br/>How can I help you?
-                    </>
-                  )}
-                </p>
-              </motion.div>
-            )}
+            
+            <div className="status-indicator">
+              <span className={`status-dot ${status}`} />
+              <span className="status-text">{getStatusText()}</span>
+            </div>
           </div>
-
-          {/* Current Live AI Response Display */}
-          {currentResponse && (
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              style={{ marginTop: '32px', textAlign: 'center', maxWidth: '600px', width: '90%' }}
-            >
-              <p className="jarvis-response" style={{ fontSize: '20px' }}>{currentResponse}</p>
-            </motion.div>
-          )}
         </main>
 
-        {/* Right Chat Sidebar */}
+        {/* Right Collapsible Chat Drawer */}
         <AnimatePresence>
           {showChat && (
             <motion.aside 
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 340, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
+              initial={{ x: 350, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 350, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="chat-sidebar"
             >
               <div className="chat-header">
-                <span>JARVIS SOHBET</span>
-                <button 
-                  onClick={() => setShowChat(false)}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
-                >
+                <h3>Sohbet & Geçmiş</h3>
+                <button className="titlebar-btn" onClick={() => setShowChat(false)}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
               </div>
@@ -519,6 +615,56 @@ export default function App() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Voice Notes Modal */}
+      {showNotes && (
+        <div className="modal-overlay" onClick={() => setShowNotes(false)}>
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '520px', maxHeight: '80vh', overflowY: 'auto' }}
+          >
+            <h2 style={{ marginTop: 0, fontSize: '18px', fontWeight: 500, marginBottom: '16px' }}>📝 Sesli Not Defterim</h2>
+            
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+              <input 
+                type="text"
+                className="input-field"
+                placeholder="Yeni not ekle..."
+                value={newNoteText}
+                onChange={(e) => setNewNoteText(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
+              />
+              <button className="save-btn" onClick={handleAddNote} style={{ width: '90px', marginTop: 0 }}>Ekle</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {notes.length === 0 && (
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', textAlign: 'center', padding: '20px' }}>
+                  Henüz kaydedilmiş bir notunuz yok.
+                </div>
+              )}
+              {notes.map(note => (
+                <div key={note.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', color: '#fff', marginBottom: '4px' }}>{note.text}</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{note.date}</div>
+                  </div>
+                  <button onClick={() => handleDeleteNote(note.id)} style={{ background: 'none', border: 'none', color: '#ff3b30', cursor: 'pointer', opacity: 0.7 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <button className="save-btn" onClick={() => setShowNotes(false)} style={{ marginTop: '20px', background: 'rgba(255,255,255,0.1)', color: '#fff' }}>
+              Kapat
+            </button>
+          </motion.div>
+        </div>
+      )}
 
       {/* Camera Preview Modal */}
       {showCamera && (
@@ -659,3 +805,5 @@ export default function App() {
     </div>
   );
 }
+
+export default App;

@@ -260,7 +260,103 @@ function createWindow() {
       return `Zamanlayıcı ayarlandı: ${delaySeconds} saniye sonra "${title}" hatırlatılacak.`;
     }
 
+    if (name === 'control_media') {
+      const action = (args.action || '').toLowerCase();
+      let key = '';
+      if (action.includes('play') || action.includes('pause') || action.includes('durdur') || action.includes('başlat')) key = '[char]179';
+      else if (action.includes('next') || action.includes('sonraki') || action.includes('geç')) key = '[char]176';
+      else if (action.includes('prev') || action.includes('önceki')) key = '[char]177';
+      else if (action.includes('volup') || action.includes('yükselt') || action.includes('arttır')) key = '[char]175';
+      else if (action.includes('voldown') || action.includes('kıs') || action.includes('azalt')) key = '[char]174';
+
+      if (key) {
+        const psCmd = `powershell -c "$wshell = New-Object -ComObject WScript.Shell; $wshell.SendKeys('${key}')"`;
+        exec(psCmd);
+        return `Medya kontrolü uygulandı: ${action}`;
+      }
+      return 'Medya aksiyonu anlaşılamadı.';
+    }
+
+    if (name === 'save_note') {
+      const notesPath = path.join(app.getPath('userData'), 'jarvis_notes.json');
+      try {
+        let notes = [];
+        if (fs.existsSync(notesPath)) {
+          notes = JSON.parse(fs.readFileSync(notesPath, 'utf-8'));
+        }
+        const newNote = { id: Date.now().toString(), text: args.text, date: new Date().toLocaleString('tr-TR') };
+        notes.unshift(newNote);
+        fs.writeFileSync(notesPath, JSON.stringify(notes, null, 2));
+        return `Not kaydedildi: "${args.text}"`;
+      } catch (e) {
+        return `Not kaydetme hatası: ${e.message}`;
+      }
+    }
+
+    if (name === 'get_notes') {
+      const notesPath = path.join(app.getPath('userData'), 'jarvis_notes.json');
+      try {
+        if (!fs.existsSync(notesPath)) return JSON.stringify([]);
+        return fs.readFileSync(notesPath, 'utf-8');
+      } catch (e) {
+        return JSON.stringify([]);
+      }
+    }
+
+    if (name === 'delete_note') {
+      const notesPath = path.join(app.getPath('userData'), 'jarvis_notes.json');
+      try {
+        if (fs.existsSync(notesPath)) {
+          let notes = JSON.parse(fs.readFileSync(notesPath, 'utf-8'));
+          notes = notes.filter(n => n.id !== args.id);
+          fs.writeFileSync(notesPath, JSON.stringify(notes, null, 2));
+        }
+        return 'Not silindi.';
+      } catch (e) {
+        return 'Not silinemedi.';
+      }
+    }
+
     return "Bilinmeyen sistem fonksiyonu.";
+  });
+
+  // Additional IPC Listeners for System Metrics & Screen Capture
+  ipcMain.handle('get-system-stats', async () => {
+    const os = require('os');
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const usedMem = totalMem - freeMem;
+    const memUsage = Math.round((usedMem / totalMem) * 100);
+
+    const cpus = os.cpus();
+    let userTicks = 0, sysTicks = 0, idleTicks = 0;
+    cpus.forEach(cpu => {
+      userTicks += cpu.times.user;
+      sysTicks += cpu.times.sys;
+      idleTicks += cpu.times.idle;
+    });
+    const totalTicks = userTicks + sysTicks + idleTicks;
+    const cpuUsage = Math.min(100, Math.round(((userTicks + sysTicks) / (totalTicks || 1)) * 100));
+
+    return {
+      cpuUsage,
+      memUsage,
+      usedMemGB: (usedMem / (1024 ** 3)).toFixed(1),
+      totalMemGB: (totalMem / (1024 ** 3)).toFixed(1)
+    };
+  });
+
+  ipcMain.handle('capture-screen', async () => {
+    const { desktopCapturer } = require('electron');
+    try {
+      const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 1280, height: 720 } });
+      if (sources.length > 0) {
+        return sources[0].thumbnail.toDataURL();
+      }
+    } catch(e) {
+      console.error('Screen capture error:', e);
+    }
+    return null;
   });
 
   app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {

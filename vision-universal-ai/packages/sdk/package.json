@@ -1,0 +1,50 @@
+{
+  "name": "vision-universal-ai",
+  "version": "1.0.0",
+  "description": "One SDK. Every AI. Enterprise-grade, production-ready Universal AI SDK for TypeScript and JavaScript.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@vision-ai/core": "workspace:*",
+    "@vision-ai/gemini": "workspace:*",
+    "@vision-ai/openai": "workspace:*",
+    "@vision-ai/anthropic": "workspace:*",
+    "@vision-ai/groq": "workspace:*",
+    "@vision-ai/deepseek": "workspace:*",
+    "@vision-ai/openrouter": "workspace:*",
+    "@vision-ai/ollama": "workspace:*",
+    "@vision-ai/mistral": "workspace:*"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rimraf dist tsconfig.tsbuildinfo"
+  },
+  "keywords": [
+    "ai",
+    "universal-ai",
+    "sdk",
+    "openai",
+    "gemini",
+    "anthropic",
+    "claude",
+    "groq",
+    "deepseek",
+    "openrouter",
+    "ollama",
+    "mistral",
+    "llm",
+    "streaming",
+    "tools"
+  ],
+  "author": "Vision Universal AI Contributors",
+  "license": "MIT"
+}

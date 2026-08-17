@@ -42,6 +42,7 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
   const audioChunksRef = useRef<BlobPart[]>([]);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const maxTimeoutRef = useRef<any>(null);
+  const recognitionRef = useRef<any>(null);
 
   // Auto Voice Silence Detection Refs
   const hasSpokenRef = useRef(false);
@@ -170,16 +171,58 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
     }
     
     setErrorMessage('');
+    playSoundEffect('start');
+    setStatus('listening');
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (SpeechRecognition) {
+      try {
+        console.log('[JARVIS] Starting Web Speech Recognition API...');
+        const recognition = new SpeechRecognition();
+        recognitionRef.current = recognition;
+        recognition.lang = language;
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.onresult = async (event: any) => {
+          const transcript = event.results[0]?.[0]?.transcript;
+          console.log('[JARVIS Speech Recognition Transcript]:', transcript);
+          if (transcript) {
+            playSoundEffect('stop');
+            await sendTextMessage(transcript);
+          }
+        };
+
+        recognition.onerror = (event: any) => {
+          console.warn('[JARVIS Speech Recognition Error]:', event.error);
+          fallbackMediaRecorder();
+        };
+
+        recognition.onend = () => {
+          if (status === 'listening') {
+            setStatus('idle');
+          }
+        };
+
+        recognition.start();
+        return;
+      } catch (e) {
+        console.warn('[JARVIS Speech Recognition Exception, falling back]:', e);
+      }
+    }
+
+    fallbackMediaRecorder();
+  };
+
+  const fallbackMediaRecorder = async () => {
     audioChunksRef.current = [];
     hasSpokenRef.current = false;
     isStoppingRef.current = false;
     lastSoundTimeRef.current = Date.now();
 
-    playSoundEffect('start');
-    setStatus('listening');
-
     try {
-      console.log('[JARVIS] Requesting Microphone...');
+      console.log('[JARVIS] Requesting MediaRecorder fallback...');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
       let mimeType = 'audio/webm';
@@ -241,15 +284,13 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
           setAudioLevel(level);
 
           const now = Date.now();
-          // Detect speech start
           if (level > 0.08) {
             hasSpokenRef.current = true;
             lastSoundTimeRef.current = now;
           }
 
-          // Auto-stop after 1.2s of silence post-speech
           if (hasSpokenRef.current && (now - lastSoundTimeRef.current > 1200) && !isStoppingRef.current) {
-            console.log('[JARVIS VAD] Auto-detected end of speech. Stopping listening...');
+            console.log('[JARVIS VAD] Auto-detected end of speech. Stopping...');
             isStoppingRef.current = true;
             stopListening();
             return;
@@ -281,6 +322,10 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
     if (maxTimeoutRef.current) clearTimeout(maxTimeoutRef.current);
     playSoundEffect('stop');
 
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch(e) {}
+    }
+
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       setStatus('processing');
       mediaRecorderRef.current.stop();
@@ -309,6 +354,15 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
       await executeSystemTool('open_app', { appName: 'code' });
     }
 
+    // Media Control Triggers
+    if (lower.includes('müziği durdur') || lower.includes('müziği başlat') || lower.includes('şarkıyı geç') || lower.includes('sonraki şarkı') || lower.includes('sesi yükselt') || lower.includes('sesi kıs')) {
+      let action = 'playpause';
+      if (lower.includes('geç') || lower.includes('sonraki')) action = 'next';
+      else if (lower.includes('yükselt')) action = 'volup';
+      else if (lower.includes('kıs')) action = 'voldown';
+      await executeSystemTool('control_media', { action });
+    }
+
     // Hands-Free File / Folder Search Triggers
     if (lower.includes('dosyasını aç') || lower.includes('klasörünü aç') || lower.includes('indirilenlerdeki') || lower.includes('masaüstündeki') || lower.includes('belgelerdeki')) {
       let targetFolder = '';
@@ -316,11 +370,18 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
       else if (lower.includes('masaüstü')) targetFolder = 'desktop';
       else if (lower.includes('belge')) targetFolder = 'documents';
 
-      // Extract search term
       const words = lower.split(' ');
       const query = words.find(w => w.length > 3 && !['aç', 'dosyasını', 'klasörünü', 'indirilenlerdeki', 'masaüstündeki', 'belgelerdeki'].includes(w)) || '';
       if (query) {
         await executeSystemTool('search_file', { fileName: query, targetFolder });
+      }
+    }
+
+    // Voice Notes Triggers
+    if (lower.startsWith('not al') || lower.startsWith('not ekle')) {
+      const noteContent = text.replace(/^(not al|not ekle)/gi, '').trim();
+      if (noteContent) {
+        await executeSystemTool('save_note', { text: noteContent });
       }
     }
 
@@ -347,7 +408,6 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
         ? "Sen JARVIS adında gelişmiş bir yapay zeka asistanısın. Kullanıcının bilgisayarında tarayıcı, uygulama açma, dosya arama ve zamanlayıcı başlatma yetkin VARDIR. Yanıtların Türkçe, doğal, akıcı ve kısa olmalı."
         : "You are JARVIS, an advanced AI assistant. Your responses should be natural, intelligent, and concise.";
 
-      // Standardize mimeType string for Gemini API (e.g. "audio/webm;codecs=opus" -> "audio/webm")
       const cleanMime = (mimeType || 'audio/webm').split(';')[0];
 
       const parts = [

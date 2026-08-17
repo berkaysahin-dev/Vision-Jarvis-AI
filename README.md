@@ -12,12 +12,16 @@ JARVIS 2.0 is an advanced native Windows desktop AI assistant built with Electro
 
 ## Key Features
 
+- **Native Web Speech & Voice Intelligence**: Zero-latency native Turkish speech-to-text recognition with automatic silence detection (VAD).
+- **Live Screen Capture & Multimodal Vision**: Analyze desktop screenshots, debug code errors, and translate text on screen instantly using Google Gemini.
+- **Real-Time System Performance Gauges**: Live CPU % and RAM % usage gauge metrics rendered directly on the sidebar.
+- **Hands-Free Media & Volume Controls**: Voice & button controls for Spotify/system media (Play/Pause, Next, Volume Up/Down).
+- **Voice Notes Engine**: Dedicated Apple-style notes drawer with persistent local storage and timestamping.
 - **Global Desktop Hotkey (`Alt + Space`)**: Instantly summon JARVIS from any Windows application to start voice listening.
 - **Voice Pitch & Speed Customizer**: Fine-tune AI voice pitch and speech speed sliders in System Settings.
 - **Hands-Free File & Folder Search**: Search and open files or folders in Downloads, Desktop, and Documents using natural language.
 - **Smart Voice Reminders & Timers**: Schedule background countdown timers and trigger native Windows OS desktop notifications.
 - **Apple macOS Glassmorphism UI**: Translucent dark glass interface crafted with precision typography and SVG line vectors.
-- **Persistent Local Memory**: Secure local JSON storage for user preferences, facts, and persistent memory.
 
 ---
 
