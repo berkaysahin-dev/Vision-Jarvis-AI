@@ -117,7 +117,7 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
   const callGeminiREST = async (parts: any[], sysInstruction: string) => {
     if (!apiKey) throw new Error('API Key eksik. Lütfen Ayarlar bölümünden API anahtarınızı girin.');
 
-    const candidateModels = (GEMINI_CONFIG as any).MODELS || ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
+    const candidateModels = (GEMINI_CONFIG as any).MODELS || ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
     let lastError: any = null;
 
     for (const model of candidateModels) {
@@ -128,9 +128,8 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
           contents: [{ parts: parts }],
           system_instruction: { parts: [{ text: sysInstruction }] },
           generationConfig: {
-            maxOutputTokens: 100,
-            temperature: 0.6,
-            thinkingConfig: { thinkingBudget: 0 }
+            maxOutputTokens: 150,
+            temperature: 0.7
           }
         };
 
