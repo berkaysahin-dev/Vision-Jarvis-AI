@@ -1,5 +1,4 @@
 import { useState, useRef } from 'react';
-import { GEMINI_CONFIG } from '../config/geminiConfig';
 
 export type JarvisStatus = 'idle' | 'listening' | 'processing' | 'speaking' | 'error';
 export type JarvisLanguage = 'tr-TR' | 'en-US';
@@ -114,10 +113,58 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
     return text.replace(/\d{2}:\d{2}:\d{2}\.\d+/g, '').replace(/\s+/g, ' ').trim();
   };
 
+  const discoveredModelsRef = useRef<string[]>([]);
+
+  // Discover actual supported models dynamically for the user's API Key
+  const discoverAvailableModels = async (key: string): Promise<string[]> => {
+    try {
+      console.log('[JARVIS] Discovering available Gemini models for API key...');
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+      const data = await res.json();
+      if (data.models && Array.isArray(data.models)) {
+        const supported = data.models
+          .filter((m: any) => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
+          .map((m: any) => m.name.replace(/^models\//, ''))
+          .filter((name: string) => !name.includes('embedding') && !name.includes('imagen') && !name.includes('aqa') && !name.includes('tts'));
+        
+        // Prioritize fast flash models
+        supported.sort((a: string, b: string) => {
+          if (a.includes('flash') && !b.includes('flash')) return -1;
+          if (!a.includes('flash') && b.includes('flash')) return 1;
+          return 0;
+        });
+
+        console.log('[JARVIS] Discovered available Gemini models:', supported);
+        if (supported.length > 0) {
+          discoveredModelsRef.current = supported;
+          return supported;
+        }
+      }
+    } catch (e) {
+      console.warn('[JARVIS] Model discovery fallback:', e);
+    }
+    
+    const fallbackList = [
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash',
+      'gemini-1.5-flash-latest',
+      'gemini-1.5-pro-latest',
+      'gemini-1.5-pro',
+      'gemini-pro'
+    ];
+    discoveredModelsRef.current = fallbackList;
+    return fallbackList;
+  };
+
   const callGeminiREST = async (parts: any[], sysInstruction: string) => {
     if (!apiKey) throw new Error('API Key eksik. Lütfen Ayarlar bölümünden API anahtarınızı girin.');
 
-    const candidateModels = (GEMINI_CONFIG as any).MODELS || ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
+    let candidateModels = discoveredModelsRef.current;
+    if (!candidateModels || candidateModels.length === 0) {
+      candidateModels = await discoverAvailableModels(apiKey);
+    }
+
     let lastError: any = null;
 
     for (const model of candidateModels) {
@@ -162,6 +209,7 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
         if (data.error) {
           console.warn(`[Gemini ${model} Error (${data.error.code})]:`, data.error.message);
           lastError = data.error;
+          // If model is busy (503 High Demand), rate limited (429), or not found (404), continue to next model immediately!
           continue;
         }
       } catch (err: any) {
