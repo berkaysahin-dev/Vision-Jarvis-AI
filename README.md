@@ -1,95 +1,112 @@
 # JARVIS 2.0 — AI Desktop Voice & Vision Assistant
 
-Powered by [Shaz Vision](https://shazvision.com)
+<p align="center">
+  <img src="./docs/screenshot.png" alt="JARVIS 2.0 Desktop Interface" width="100%" style="border-radius: 14px; box-shadow: 0 12px 36px rgba(0,0,0,0.6);" />
+</p>
+
+<p align="center">
+  <b>Gelişmiş Yapay Zeka Masaüstü Asistanı — Ses, Görsel Zeka ve Sistem Kontrolü</b><br/>
+  Powered by <a href="https://shazvision.com">Shaz Vision</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Electron-43.4-47848F?style=for-the-badge&logo=electron&logoColor=white" />
+  <img src="https://img.shields.io/badge/React-19.2-61DAFB?style=for-the-badge&logo=react&logoColor=black" />
+  <img src="https://img.shields.io/badge/Three.js-0.185-000000?style=for-the-badge&logo=three.js&logoColor=white" />
+  <img src="https://img.shields.io/badge/Google_Gemini-2.0_Flash-8E75B2?style=for-the-badge&logo=google&logoColor=white" />
+  <img src="https://img.shields.io/badge/Edge_Neural_TTS-tr--TR--Ahmet-0078D7?style=for-the-badge&logo=microsoft&logoColor=white" />
+</p>
+---
+
+## 🌟 Yeni Nesil Özellikler (JARVIS 2.0)
+
+### 🪐 1. 3D Motion Exploration Görselleştiricisi
+- **Çok Eksenli Jiroskopik FUI Halkaları:** X, Y, Z uzayında bağımsız dönen neon halkalar ve yörüngesinde süzülen parlayan foton boncukları.
+- **360° Dairesel Ses Ekolayzerı:** Ses giriş ve çıkışına göre dinamik uzayıp kısalan 64 adet 3D radyal spektrum çubuğu.
+- **1200+ Kuantum Parçacık Sarmalı:** Organik sıvı plazma çekirdek etrafında dönen parçacık bulutu.
+
+### 🎙️ 2. Stüdyo Kalitesinde Doğal İnsan Sesi (Neural TTS)
+- **Doğal Türkçe Tonlama:** Standart robotik sesler yerine insansı tonlamalara, nefes aralıklarına sahip **Neural Türkçe Asistan Sesi** (`tr-TR-AhmetNeural`).
+- **Canlı 3D Küre Senkronizasyonu:** Çalınan ses Web Audio Analyser ile 3D küreye bağlanır; JARVIS konuşurken küre ritmik olarak dalgalanır.
+
+### ⚡ 3. Ultra Düşük Gecikmeli Ses Algılama (Sub-300ms)
+- **Canlı Akışlı STT:** Konuştuğunuz kelimeler ağzınızdan çıktığı an algılanır.
+- **Hızlı VAD (Ses Aktivite Dedektörü):** Cümleniz bittikten yalnızca **380 milisaniye** sonra komut Gemini'ye iletilir.
+- **Düşünme Gecikmesiz Yanıt:** `gemini-2.0-flash` motoru sayesinde anında tek ve net cümlelik Türkçe yanıt üretilir.
+
+### ⏹️ 4. Anında Sesli Sohbeti Durdurma & Araya Girme (Interrupt)
+- Konuşurken veya dinlerken *"dur"*, *"sus"*, *"jarvis dur"*, *"sohbeti durdur"*, *"iptal"* dediğinizde veya klavyeden `Escape` tuşuna / arayüzdeki **[DURDUR]** butonuna bastığınızda ses ve işlem anında kesilir.
+
+### 📊 5. Gerçek Zamanlı OS Sparkline Performans Grafikleri
+- Son 15 saniyelik CPU ve RAM kullanımını degrade dalga grafikleri (Sparkline) ile canlı çizen modern OS kartı.
+
+### ✨ 6. Modern Tipografi
+- **Arayüz Fontu:** `Plus Jakarta Sans`
+- **Teknik/Telemetri Fontu:** `JetBrains Mono`
+
+### 📱 7. Akıllı Uygulama Kontrolü & Mobil Uzaktan Erişim
+- Chrome, Spotify, VS Code, Not Defteri, Hesap Makinesi gibi uygulamaları sesle veya modern listeden başlatma.
+- Sol kenarda aktif uygulamayı gösteren parlayan **Cyan Aktif Göstergesi**.
+- QR Kod ile cep telefonundan bağlanıp komut gönderebilme.
 
 ---
 
----
+## 🛠️ Mimari & Teknoloji Yığını
 
-## Overview
-
-JARVIS 2.0 is an advanced native Windows desktop AI assistant built with Electron, React, Three.js, and Google Gemini API. Designed around Apple Human Interface Guidelines, it features real-time voice interaction with Voice Activity Silence Detection (VAD), system application control, live webcam vision analysis, and a remote mobile control interface.
-
----
-
-## Key Features
-
-- **Native Web Speech & Voice Intelligence**: Zero-latency native Turkish speech-to-text recognition with automatic silence detection (VAD).
-- **Live Screen Capture & Multimodal Vision**: Analyze desktop screenshots, debug code errors, and translate text on screen instantly using Google Gemini.
-- **Real-Time System Performance Gauges**: Live CPU % and RAM % usage gauge metrics rendered directly on the sidebar.
-- **Hands-Free Media & Volume Controls**: Voice & button controls for Spotify/system media (Play/Pause, Next, Volume Up/Down).
-- **Voice Notes Engine**: Dedicated Apple-style notes drawer with persistent local storage and timestamping.
-- **Global Desktop Hotkey (`Alt + Space`)**: Instantly summon JARVIS from any Windows application to start voice listening.
-- **Voice Pitch & Speed Customizer**: Fine-tune AI voice pitch and speech speed sliders in System Settings.
-- **Hands-Free File & Folder Search**: Search and open files or folders in Downloads, Desktop, and Documents using natural language.
-- **Smart Voice Reminders & Timers**: Schedule background countdown timers and trigger native Windows OS desktop notifications.
-- **Apple macOS Glassmorphism UI**: Translucent dark glass interface crafted with precision typography and SVG line vectors.
-
----
-
-## Architecture & Technology Stack
-
-| Component | Technology |
+| Bileşen | Teknoloji |
 | :--- | :--- |
-| **Desktop Shell** | Electron (Windows Native) |
-| **Frontend UI** | React 18 (TypeScript) + Vite |
-| **3D Rendering** | Three.js + React Three Fiber |
-| **AI Models** | Google Gemini API (`gemini-3.6-flash` REST & `gemini-2.5-flash-native-audio-latest` Live WebSocket) |
-| **Remote Server** | Node.js Express + Custom Web Protocol |
+| **Masaüstü Motoru** | Electron 43 (Windows Native) |
+| **Önyüz UI** | React 19 (TypeScript) + Vite 8 |
+| **3D Rendering** | Three.js + React Three Fiber + Drei |
+| **Yapay Zeka Modelleri** | Google Gemini REST (`gemini-2.0-flash`, `gemini-2.5-flash`) |
+| **Ses Sentezi** | Microsoft Edge Neural TTS (`tr-TR-AhmetNeural`) |
+| **Tipografi** | Plus Jakarta Sans & JetBrains Mono |
 
 ---
 
-## Quick Start & Installation
+## 🚀 Hızlı Başlangıç & Kurulum
 
-### Prerequisites
+### Gereksinimler
+- **Node.js**: v18.0.0 veya üzeri
+- **Google Gemini API Key**: [Google AI Studio](https://aistudio.google.com/)'dan ücretsiz temin edebilirsiniz.
 
-- **Node.js**: v18.0.0 or higher
-- **npm**: v9.0.0 or higher
-- **Google Gemini API Key**: Obtain a free key from [Google AI Studio](https://aistudio.google.com/)
+### Kurulum Adımları
 
-### Installation Steps
-
-1. **Clone the Repository**
+1. **Depoyu Klonlayın:**
    ```bash
    git clone https://github.com/berkaysahin-dev/Vision-Jarvis-AI.git
    cd Vision-Jarvis-AI
    ```
 
-2. **Install Dependencies**
+2. **Bağımlılıkları Yükleyin:**
    ```bash
    npm install
    ```
 
-3. **Start Development Server**
-   ```bash
-   npm run dev
-   ```
-
-4. **Launch Production Desktop App**
-   Run the pre-configured executable runner on Windows:
+3. **Uygulamayı Başlatın:**
    ```bash
    BASLAT.bat
    ```
+   veya geliştirici modunda:
+   ```bash
+   npm run electron:dev
+   ```
 
 ---
 
-## Configuration
-
-1. Launch JARVIS 2.0.
-2. Enter your **Google Gemini API Key** in the System Settings panel.
-3. Save settings to persist the configuration locally on your device.
-
----
-
-## Brand & Support
-
-Developed and maintained by **[Shaz Vision](https://shazvision.com)**.
-
-- Website: [https://shazvision.com](https://shazvision.com)
-- Repository: [github.com/berkaysahin-dev/Vision-Jarvis-AI](https://github.com/berkaysahin-dev/Vision-Jarvis-AI)
+## ⚙️ Yapılandırma
+1. JARVIS'i açın.
+2. Sağ üstteki **Ayarlar (Dişli)** ikonuna tıklayın.
+3. **Google Gemini API Anahtarınızı** girip kaydedin.
 
 ---
 
-## License
+## 🛡️ Marka & Geliştirici
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+Geliştirici & Tasarım: **[Shaz Vision](https://shazvision.com)**  
+Depo: [github.com/berkaysahin-dev/Vision-Jarvis-AI](https://github.com/berkaysahin-dev/Vision-Jarvis-AI)
+
+---
+
+## 📄 Lisans
+Bu proje [MIT Lisansı](LICENSE) altında lisanslanmıştır.

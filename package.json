@@ -71,6 +71,7 @@
     "@react-three/drei": "^10.7.8",
     "@react-three/fiber": "^9.7.0",
     "framer-motion": "^13.1.0",
+    "msedge-tts": "^2.0.7",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

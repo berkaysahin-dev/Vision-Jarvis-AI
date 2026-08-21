@@ -359,6 +359,29 @@ function createWindow() {
     return null;
   });
 
+  ipcMain.handle('synthesize-speech', async (_event, { text, voice }) => {
+    try {
+      const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts');
+      const tts = new MsEdgeTTS();
+      const selectedVoice = voice || 'tr-TR-AhmetNeural'; // Natural human Turkish assistant voice
+      await tts.setMetadata(selectedVoice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+      
+      const { audioStream } = tts.toStream(text);
+      return new Promise((resolve, reject) => {
+        const chunks = [];
+        audioStream.on('data', chunk => chunks.push(chunk));
+        audioStream.on('end', () => {
+          const buffer = Buffer.concat(chunks);
+          resolve(buffer.toString('base64'));
+        });
+        audioStream.on('error', err => reject(err));
+      });
+    } catch (e) {
+      console.error('[Edge TTS Error]:', e);
+      return null;
+    }
+  });
+
   app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
     event.preventDefault();
     callback(true);

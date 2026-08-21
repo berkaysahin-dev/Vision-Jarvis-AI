@@ -43,6 +43,9 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const maxTimeoutRef = useRef<any>(null);
   const recognitionRef = useRef<any>(null);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const silenceTimerRef = useRef<any>(null);
+  const latestTranscriptRef = useRef<string>('');
 
   // Auto Voice Silence Detection Refs
   const hasSpokenRef = useRef(false);
@@ -112,51 +115,109 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
   };
 
   const callGeminiREST = async (parts: any[], sysInstruction: string) => {
-    if (!apiKey) throw new Error('API Key eksik.');
+    if (!apiKey) throw new Error('API Key eksik. Lütfen Ayarlar bölümünden API anahtarınızı girin.');
 
-    const model = GEMINI_CONFIG.CHAT_MODEL;
-    console.log(`[Gemini REST] Calling model: ${model}`);
-    
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-    const bodyPayload: any = {
-      contents: [{ parts: parts }],
-      system_instruction: { parts: [{ text: sysInstruction }] }
-    };
+    const candidateModels = (GEMINI_CONFIG as any).MODELS || ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
+    let lastError: any = null;
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(bodyPayload)
-    });
+    for (const model of candidateModels) {
+      try {
+        console.log(`[Gemini REST] Connecting with model: ${model}...`);
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const bodyPayload: any = {
+          contents: [{ parts: parts }],
+          system_instruction: { parts: [{ text: sysInstruction }] },
+          generationConfig: {
+            maxOutputTokens: 100,
+            temperature: 0.6,
+            thinkingConfig: { thinkingBudget: 0 }
+          }
+        };
 
-    const data = await res.json();
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyPayload)
+        });
 
-    if (res.ok && data.candidates && data.candidates[0]?.content?.parts) {
-      console.log(`[Gemini REST] Connected successfully with ${model}`);
-      let combinedText = '';
-      for (const part of data.candidates[0].content.parts) {
-        if (part.text) {
-          combinedText += part.text;
+        const data = await res.json();
+
+        if (res.ok && data.candidates && data.candidates[0]?.content?.parts) {
+          console.log(`[Gemini REST] Connected successfully with ${model}`);
+          let combinedText = '';
+          for (const part of data.candidates[0].content.parts) {
+            if (part.text) {
+              combinedText += part.text;
+            }
+            if (part.functionCall) {
+              const toolResult = await executeSystemTool(part.functionCall.name, part.functionCall.args);
+              setConversation(prev => [
+                ...prev,
+                { role: 'model', content: `⚙️ [Sistem Aksiyonu]: ${toolResult}` }
+              ]);
+            }
+          }
+          return cleanResponseText(combinedText) || 'İşlem tamamlandı.';
         }
-        if (part.functionCall) {
-          const toolResult = await executeSystemTool(part.functionCall.name, part.functionCall.args);
-          setConversation(prev => [
-            ...prev,
-            { role: 'model', content: `⚙️ [Sistem Aksiyonu]: ${toolResult}` }
-          ]);
+
+        if (data.error) {
+          console.warn(`[Gemini ${model} Error (${data.error.code})]:`, data.error.message);
+          lastError = data.error;
+          continue;
         }
+      } catch (err: any) {
+        console.warn(`[Gemini ${model} Network Exception]:`, err);
+        lastError = err;
       }
-      return cleanResponseText(combinedText) || 'İşlem tamamlandı.';
     }
 
-    if (data.error) {
-      console.error(`[Gemini REST Error]:`, data.error);
-      throw new Error(data.error.message || 'Gemini bağlantı hatası.');
+    if (lastError) {
+      console.error('[Gemini All Models Exhausted]:', lastError);
+      throw new Error(lastError.message || 'Gemini servisleri şu an yoğun, lütfen bir süre sonra tekrar deneyin.');
     }
 
     throw new Error('Gemini API yanıt vermedi.');
   };
 
+  // Immediate Voice Chat Stop & Interrupt System
+  const stopVoiceChat = () => {
+    console.log('[JARVIS] Halting all voice chat and speech output...');
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    if (maxTimeoutRef.current) clearTimeout(maxTimeoutRef.current);
+
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch(e) {}
+    }
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      try { mediaRecorderRef.current.stop(); } catch(e) {}
+    }
+
+    setAudioLevel(0);
+    setStatus('idle');
+    playSoundEffect('stop');
+  };
+
+  // Check if spoken command is a direct interruption/silence trigger
+  const isInterruptCommand = (text: string): boolean => {
+    const clean = text.toLowerCase().trim();
+    const interruptWords = [
+      'dur', 'sus', 'jarvis dur', 'sohbeti durdur', 'sesi kes', 
+      'iptal', 'yeter', 'kapat', 'tamam sus', 'stop', 'konuşma', 'sessiz ol'
+    ];
+    return interruptWords.some(w => clean === w || clean.startsWith(w + ' ') || clean.endsWith(' ' + w));
+  };
+
+  // Fast Real-Time Speech Recognition with Immediate Silence Cutoff (380ms)
   const startListening = async () => {
     if (!apiKey) {
       setErrorMessage(language === 'tr-TR' ? 'Lütfen önce API anahtarını girin.' : 'Please enter API key first.');
@@ -170,37 +231,82 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
       return;
     }
     
+    // Stop any ongoing speech playback
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+
     setErrorMessage('');
     playSoundEffect('start');
     setStatus('listening');
+    latestTranscriptRef.current = '';
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (SpeechRecognition) {
       try {
-        console.log('[JARVIS] Starting Web Speech Recognition API...');
+        console.log('[JARVIS] Starting Ultra-Fast Web Speech Recognition...');
         const recognition = new SpeechRecognition();
         recognitionRef.current = recognition;
         recognition.lang = language;
-        recognition.interimResults = false;
+        recognition.interimResults = true;
+        recognition.continuous = true;
         recognition.maxAlternatives = 1;
 
-        recognition.onresult = async (event: any) => {
-          const transcript = event.results[0]?.[0]?.transcript;
-          console.log('[JARVIS Speech Recognition Transcript]:', transcript);
-          if (transcript) {
-            playSoundEffect('stop');
-            await sendTextMessage(transcript);
+        recognition.onresult = (event: any) => {
+          let interim = '';
+          let final = '';
+          let hasFinal = false;
+
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              final += event.results[i][0].transcript;
+              hasFinal = true;
+            } else {
+              interim += event.results[i][0].transcript;
+            }
+          }
+
+          const currentWords = (final || interim).trim();
+          if (currentWords) {
+            console.log('[JARVIS Real-Time Live Transcript]:', currentWords);
+            latestTranscriptRef.current = currentWords;
+
+            // Direct Interrupt Detection: if user says "dur", "sus", "iptal", halt immediately!
+            if (isInterruptCommand(currentWords)) {
+              console.log('[JARVIS Interrupt Triggered by Voice]:', currentWords);
+              stopVoiceChat();
+              return;
+            }
+
+            if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+
+            // If final result ready: trigger in 50ms; if interim: trigger after 380ms of silence
+            const debounceMs = hasFinal ? 50 : 380;
+            silenceTimerRef.current = setTimeout(async () => {
+              const textToSend = latestTranscriptRef.current;
+              if (textToSend && status === 'listening') {
+                console.log('[JARVIS Fast VAD Executing]:', textToSend);
+                stopListening();
+                await sendTextMessage(textToSend);
+              }
+            }, debounceMs);
           }
         };
 
         recognition.onerror = (event: any) => {
           console.warn('[JARVIS Speech Recognition Error]:', event.error);
-          fallbackMediaRecorder();
+          if (event.error !== 'no-speech') {
+            fallbackMediaRecorder();
+          }
         };
 
         recognition.onend = () => {
-          if (status === 'listening') {
+          if (status === 'listening' && !latestTranscriptRef.current) {
             setStatus('idle');
           }
         };
@@ -265,7 +371,7 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
         };
       };
 
-      mediaRecorder.start(500);
+      mediaRecorder.start(200);
 
       // Auto Voice Silence Detection (VAD)
       audioCtxRef.current = new AudioContext();
@@ -289,7 +395,7 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
             lastSoundTimeRef.current = now;
           }
 
-          if (hasSpokenRef.current && (now - lastSoundTimeRef.current > 1200) && !isStoppingRef.current) {
+          if (hasSpokenRef.current && (now - lastSoundTimeRef.current > 480) && !isStoppingRef.current) {
             console.log('[JARVIS VAD] Auto-detected end of speech. Stopping...');
             isStoppingRef.current = true;
             stopListening();
@@ -319,6 +425,7 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
   };
 
   const stopListening = () => {
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     if (maxTimeoutRef.current) clearTimeout(maxTimeoutRef.current);
     playSoundEffect('stop');
 
@@ -405,8 +512,8 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
 
     try {
       const sysInstruction = language === 'tr-TR' 
-        ? "Sen JARVIS adında gelişmiş bir yapay zeka asistanısın. Kullanıcının bilgisayarında tarayıcı, uygulama açma, dosya arama ve zamanlayıcı başlatma yetkin VARDIR. Yanıtların Türkçe, doğal, akıcı ve kısa olmalı."
-        : "You are JARVIS, an advanced AI assistant. Your responses should be natural, intelligent, and concise.";
+        ? "Sen JARVIS adında gelişmiş ve son derece hızlı bir yapay zeka asistanısın. Yanıtların TEK ve KISA cümle, doğrudan, net ve akıcı Türkçe olmalı. Bilgisayarda tarayıcı, uygulama açma ve arama yetkin vardır."
+        : "You are JARVIS, an advanced AI assistant. Respond in a single, ultra-concise sentence.";
 
       const cleanMime = (mimeType || 'audio/webm').split(';')[0];
 
@@ -426,10 +533,11 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
         { role: 'model', content: text }
       ]);
       setCurrentResponse(text);
-      setStatus('speaking');
 
       if (text) {
         speakText(text);
+      } else {
+        setStatus('idle');
       }
 
     } catch (error: any) {
@@ -443,14 +551,19 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
   const sendTextMessage = async (text: string) => {
     if (!text.trim()) return;
 
+    if (isInterruptCommand(text)) {
+      stopVoiceChat();
+      return;
+    }
+
     setConversation(prev => [...prev, { role: 'user', content: text }]);
     setStatus('processing');
     setErrorMessage('');
 
     try {
       const sysInstruction = language === 'tr-TR' 
-        ? "Sen JARVIS adında gelişmiş bir yapay zeka asistanısın. Kullanıcının bilgisayarında tarayıcı, uygulama açma, dosya arama ve zamanlayıcı başlatma yetkin VARDIR. Yanıtların Türkçe, doğal, akıcı ve kısa olmalı."
-        : "You are JARVIS. Respond intelligently and concisely.";
+        ? "Sen JARVIS adında gelişmiş ve son derece hızlı bir yapay zeka asistanısın. Yanıtların TEK ve KISA cümle, doğrudan, net ve akıcı Türkçe olmalı. Asla gereksiz açıklama yapma. Bilgisayarda tarayıcı, uygulama açma ve sistem kontrolü yetkin vardır."
+        : "You are JARVIS. Respond in a single, ultra-concise, natural sentence.";
 
       const parts = [{ text: text }];
 
@@ -461,7 +574,6 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
 
       setConversation(prev => [...prev, { role: 'model', content: answer }]);
       setCurrentResponse(answer);
-      setStatus('speaking');
       speakText(answer);
 
     } catch (error: any) {
@@ -476,10 +588,10 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
     setErrorMessage('');
 
     try {
-      const sysInstruction = "Sen JARVIS adında görsel analizi yapabilen bir asistansın. Ekrandaki/kameradaki görüntüyü Türkçe incele ve özetle.";
+      const sysInstruction = "Sen JARVIS adında görsel analizi yapabilen bir asistansın. Ekrandaki/kameradaki görüntüyü Türkçe incele ve tek kısa cümlede özetle.";
       
       const parts = [
-        { text: promptText || "Bu görüntüde ne var? Detaylıca açıkla." },
+        { text: promptText || "Bu görüntüde ne var? Kısaca açıkla." },
         { inline_data: { mime_type: 'image/jpeg', data: base64Image } }
       ];
 
@@ -492,7 +604,6 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
         { role: 'model', content: text }
       ]);
       setCurrentResponse(text);
-      setStatus('speaking');
       speakText(text);
 
     } catch (e: any) {
@@ -502,7 +613,96 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
     }
   };
 
-  const speakText = (text: string) => {
+  // Studio-Quality Natural Human Voice Output (Edge Neural TTS + Audio Analyser for 3D Orb)
+  const speakText = async (text: string) => {
+    if (!text) {
+      setStatus('idle');
+      return;
+    }
+
+    // Clean text from markdown syntax, emojis, and hashtags for crisp natural pronunciation
+    const cleanText = text
+      .replace(/[*#_`~>\[\]()]/g, '')
+      .replace(/\bhttps?:\/\/\S+/gi, '')
+      .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+      .trim();
+
+    if (!cleanText) {
+      setStatus('idle');
+      return;
+    }
+
+    setStatus('speaking');
+
+    // 1. Try Studio Natural Human Neural Voice via Electron
+    if (typeof window !== 'undefined' && (window as any).require) {
+      try {
+        const { ipcRenderer } = (window as any).require('electron');
+        const voiceName = language === 'tr-TR' ? 'tr-TR-AhmetNeural' : 'en-US-ChristopherNeural';
+        const audioBase64 = await ipcRenderer.invoke('synthesize-speech', { text: cleanText, voice: voiceName });
+
+        if (audioBase64) {
+          if (currentAudioRef.current) {
+            currentAudioRef.current.pause();
+            currentAudioRef.current = null;
+          }
+
+          const audio = new Audio(`data:audio/mp3;base64,${audioBase64}`);
+          currentAudioRef.current = audio;
+
+          // Connect Web Audio API Analyser to drive 3D Orb visualizer in real-time
+          try {
+            const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const source = audioCtx.createMediaElementSource(audio);
+            const analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 256;
+            source.connect(analyser);
+            analyser.connect(audioCtx.destination);
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+            const updateVisualizer = () => {
+              if (!audio.paused && !audio.ended) {
+                analyser.getByteFrequencyData(dataArray);
+                let sum = 0;
+                for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+                const level = (sum / dataArray.length) / 255;
+                setAudioLevel(level * 1.5);
+                requestAnimationFrame(updateVisualizer);
+              } else {
+                setAudioLevel(0);
+              }
+            };
+
+            audio.onplay = () => {
+              audioCtx.resume();
+              updateVisualizer();
+            };
+          } catch (e) {
+            // Web Audio fallback
+          }
+
+          audio.onended = () => {
+            setStatus('idle');
+            setAudioLevel(0);
+          };
+
+          audio.onerror = () => {
+            fallbackSpeechSynthesis(cleanText);
+          };
+
+          await audio.play();
+          return;
+        }
+      } catch (e) {
+        console.warn('[JARVIS Neural Voice Fallback to Web Speech]:', e);
+      }
+    }
+
+    // 2. Fallback to Web Speech Synthesis
+    fallbackSpeechSynthesis(cleanText);
+  };
+
+  const fallbackSpeechSynthesis = (text: string) => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
@@ -512,14 +712,20 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
 
       const voices = window.speechSynthesis.getVoices();
       const preferredVoice = voices.find(v => 
-        v.lang.startsWith('tr') && (v.name.includes('Google') || v.name.includes('Tolga') || v.name.includes('Natural') || v.name.includes('Male'))
+        v.lang.startsWith('tr') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Tolga') || v.name.includes('Male'))
       ) || voices.find(v => v.lang.startsWith('tr'));
 
       if (preferredVoice) utterance.voice = preferredVoice;
 
       utterance.onstart = () => setStatus('speaking');
-      utterance.onend = () => setStatus('idle');
-      utterance.onerror = () => setStatus('idle');
+      utterance.onend = () => {
+        setStatus('idle');
+        setAudioLevel(0);
+      };
+      utterance.onerror = () => {
+        setStatus('idle');
+        setAudioLevel(0);
+      };
 
       window.speechSynthesis.speak(utterance);
     } else {
@@ -541,6 +747,7 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
     toggleMute,
     startListening,
     stopListening,
+    stopVoiceChat,
     sendTextMessage,
     sendImageToGemini,
   };

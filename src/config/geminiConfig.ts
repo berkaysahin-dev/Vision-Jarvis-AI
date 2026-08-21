@@ -1,7 +1,10 @@
 export const GEMINI_CONFIG = {
-  // Verified Live WebSocket API Model for your API Key (supports bidiGenerateContent)
-  LIVE_MODEL: 'gemini-2.5-flash-native-audio-latest',
-  
-  // Verified REST API Model for your API Key (supports generateContent for text, chat, and vision)
-  CHAT_MODEL: 'gemini-3.6-flash',
+  // Ultra-Fast High-Availability Models (gemini-2.0-flash has near-zero latency and no thinking delay)
+  MODELS: [
+    'gemini-2.0-flash',
+    'gemini-2.5-flash',
+    'gemini-1.5-flash',
+    'gemini-2.5-flash-lite'
+  ],
+  CHAT_MODEL: 'gemini-2.0-flash',
 };
