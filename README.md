@@ -1,7 +1,7 @@
 # JARVIS 2.0 — AI Desktop Voice & Vision Assistant
 
 <p align="center">
-  <img src="./docs/screenshot.png" alt="JARVIS 2.0 Desktop Interface" width="100%" style="border-radius: 14px; box-shadow: 0 12px 36px rgba(0,0,0,0.6);" />
+  <img src="https://raw.githubusercontent.com/berkaysahin-dev/Vision-Jarvis-AI/main/docs/preview.jpg" alt="JARVIS 2.0 Desktop Interface" width="100%" style="border-radius: 14px; box-shadow: 0 12px 36px rgba(0,0,0,0.6);" />
 </p>
 
 <p align="center">
