@@ -1,12 +1,132 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
+import { GEMINI_CONFIG } from '../config/geminiConfig';
 
 export type JarvisStatus = 'idle' | 'listening' | 'processing' | 'speaking' | 'error';
 export type JarvisLanguage = 'tr-TR' | 'en-US';
+export type JarvisSoundType = 'wake' | 'start' | 'stop' | 'success' | 'process' | 'error';
 
 export interface Message {
   role: 'user' | 'model';
   content: string;
 }
+
+// Studio-Quality Hardware Synthesizer using Web Audio API (Zero External Files Needed)
+export const playJarvisSound = (type: JarvisSoundType) => {
+  try {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const now = ctx.currentTime;
+
+    if (type === 'wake') {
+      // Iron Man / JARVIS High-Tech 3-tone Crystalline Wake Chime (D5 -> A5 -> D6)
+      const notes = [587.33, 880.00, 1174.66];
+      notes.forEach((freq, index) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const filter = ctx.createBiquadFilter();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + index * 0.045);
+
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(freq * 1.15, now);
+        filter.Q.setValueAtTime(2.5, now);
+
+        const startTime = now + index * 0.045;
+        gain.gain.setValueAtTime(0, startTime);
+        gain.gain.linearRampToValueAtTime(0.12, startTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.28);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(startTime);
+        osc.stop(startTime + 0.3);
+      });
+    } else if (type === 'start') {
+      // Crisp Dual-Harmonic Activation Chime (E5 -> B5)
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc1.type = 'sine';
+      osc2.type = 'triangle';
+
+      osc1.frequency.setValueAtTime(659.25, now);
+      osc1.frequency.exponentialRampToValueAtTime(1318.51, now + 0.12);
+
+      osc2.frequency.setValueAtTime(987.77, now);
+      osc2.frequency.exponentialRampToValueAtTime(1975.53, now + 0.12);
+
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.09, now + 0.025);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + 0.18);
+      osc2.stop(now + 0.18);
+    } else if (type === 'stop') {
+      // Soft Gentle Sci-Fi Deactivation / Interrupt (A5 -> D5)
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880.00, now);
+      osc.frequency.exponentialRampToValueAtTime(440.00, now + 0.14);
+
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.16);
+    } else if (type === 'success') {
+      // Bright Positive Sci-Fi Confirmation Chord (G5 + E6)
+      [783.99, 1318.51].forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+
+        const st = now + idx * 0.05;
+        gain.gain.setValueAtTime(0, st);
+        gain.gain.linearRampToValueAtTime(0.1, st + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, st + 0.22);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(st);
+        osc.stop(st + 0.25);
+      });
+    } else if (type === 'error') {
+      // Subtle Sci-Fi Warning Tone
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.linearRampToValueAtTime(130, now + 0.18);
+
+      gain.gain.setValueAtTime(0.06, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.22);
+    }
+  } catch (e) {
+    console.warn('[JARVIS Sound FX Error]:', e);
+  }
+};
 
 export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
   const [status, setStatus] = useState<JarvisStatus>('idle');
@@ -37,6 +157,23 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
     localStorage.setItem('jarvis_voice_rate', val.toString());
   };
 
+  // Always-On Wake Word Background Listening Mode
+  const [isAlwaysListening, setIsAlwaysListeningState] = useState<boolean>(() => {
+    const saved = localStorage.getItem('jarvis_always_listening');
+    return saved === 'true';
+  });
+  const isAlwaysListeningRef = useRef(isAlwaysListening);
+  isAlwaysListeningRef.current = isAlwaysListening;
+
+  const toggleAlwaysListening = useCallback(() => {
+    setIsAlwaysListeningState(prev => {
+      const next = !prev;
+      localStorage.setItem('jarvis_always_listening', next ? 'true' : 'false');
+      isAlwaysListeningRef.current = next;
+      return next;
+    });
+  }, []);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<BlobPart[]>([]);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -61,39 +198,6 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
     });
   };
 
-  const playSoundEffect = (type: 'start' | 'stop') => {
-    try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      
-      const now = ctx.currentTime;
-      if (type === 'start') {
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(400, now);
-        osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.1, now + 0.05);
-        gain.gain.linearRampToValueAtTime(0, now + 0.1);
-        osc.start(now);
-        osc.stop(now + 0.1);
-      } else {
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(800, now);
-        osc.frequency.exponentialRampToValueAtTime(400, now + 0.15);
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.1, now + 0.05);
-        gain.gain.linearRampToValueAtTime(0, now + 0.15);
-        osc.start(now);
-        osc.stop(now + 0.15);
-      }
-    } catch(e) {
-      console.warn("Sound effect error", e);
-    }
-  };
-
   const executeSystemTool = async (name: string, args: any) => {
     if (typeof window !== 'undefined' && (window as any).require) {
       try {
@@ -108,55 +212,71 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
     return 'Fonksiyon çalıştırılamadı.';
   };
 
-  // Clean raw AI response from VTT timestamp artifacts like 00:00:03.486000
+  const focusAppWindow = useCallback(() => {
+    if (typeof window !== 'undefined' && (window as any).require) {
+      try {
+        const { ipcRenderer } = (window as any).require('electron');
+        ipcRenderer.send('show-and-focus-window');
+      } catch (e) {
+        console.warn('IPC focus error:', e);
+      }
+    }
+  }, []);
+
+  // Clean raw AI response from VTT timestamp artifacts
   const cleanResponseText = (text: string): string => {
     return text.replace(/\d{2}:\d{2}:\d{2}\.\d+/g, '').replace(/\s+/g, ' ').trim();
   };
 
   const discoveredModelsRef = useRef<string[]>([]);
 
-  // Discover actual supported models dynamically for the user's API Key
+  // Discover actual supported models dynamically for the user's API Key with fast timeout
   const discoverAvailableModels = async (key: string): Promise<string[]> => {
+    if (discoveredModelsRef.current.length > 0) {
+      return discoveredModelsRef.current;
+    }
+
+    const defaultModels = GEMINI_CONFIG.MODELS;
+
     try {
-      console.log('[JARVIS] Discovering available Gemini models for API key...');
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), GEMINI_CONFIG.DISCOVERY_TIMEOUT_MS || 3500);
+
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`, {
+        signal: controller.signal
+      });
+      clearTimeout(timer);
+
       const data = await res.json();
       if (data.models && Array.isArray(data.models)) {
         const supported = data.models
           .filter((m: any) => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
           .map((m: any) => m.name.replace(/^models\//, ''))
-          .filter((name: string) => !name.includes('embedding') && !name.includes('imagen') && !name.includes('aqa') && !name.includes('tts'));
-        
-        // Prioritize fast flash models
+          .filter((name: string) => !name.includes('embedding') && !name.includes('imagen') && !name.includes('aqa') && !name.includes('tts') && !name.includes('2.5-flash'));
+
+        // Prioritize fast 2.0 and 1.5 flash models
         supported.sort((a: string, b: string) => {
+          if (a.includes('2.0-flash') && !b.includes('2.0-flash')) return -1;
+          if (b.includes('2.0-flash') && !a.includes('2.0-flash')) return 1;
           if (a.includes('flash') && !b.includes('flash')) return -1;
           if (!a.includes('flash') && b.includes('flash')) return 1;
           return 0;
         });
 
-        console.log('[JARVIS] Discovered available Gemini models:', supported);
         if (supported.length > 0) {
           discoveredModelsRef.current = supported;
           return supported;
         }
       }
     } catch (e) {
-      console.warn('[JARVIS] Model discovery fallback:', e);
+      console.warn('[JARVIS] Fast model discovery timed out or failed, using default fast models:', e);
     }
-    
-    const fallbackList = [
-      'gemini-2.5-flash',
-      'gemini-2.0-flash',
-      'gemini-1.5-flash',
-      'gemini-1.5-flash-latest',
-      'gemini-1.5-pro-latest',
-      'gemini-1.5-pro',
-      'gemini-pro'
-    ];
-    discoveredModelsRef.current = fallbackList;
-    return fallbackList;
+
+    discoveredModelsRef.current = defaultModels;
+    return defaultModels;
   };
 
+  // Robust, Low-Latency Gemini REST Call with 8s AbortController and Fast Failover
   const callGeminiREST = async (parts: any[], sysInstruction: string) => {
     if (!apiKey) throw new Error('API Key eksik. Lütfen Ayarlar bölümünden API anahtarınızı girin.');
 
@@ -165,17 +285,29 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
       candidateModels = await discoverAvailableModels(apiKey);
     }
 
+    // Combine guaranteed stable models with discovered ones
+    const prioritizedModels = Array.from(new Set([
+      GEMINI_CONFIG.CHAT_MODEL,
+      ...GEMINI_CONFIG.MODELS,
+      ...candidateModels
+    ])).filter(m => !m.includes('2.5-flash')); // Remove nonexistent experimental names
+
     let lastError: any = null;
 
-    for (const model of candidateModels) {
+    for (const model of prioritizedModels) {
+      const controller = new AbortController();
+      const timeoutTimer = setTimeout(() => {
+        controller.abort();
+      }, GEMINI_CONFIG.REQUEST_TIMEOUT_MS || 8000);
+
       try {
-        console.log(`[Gemini REST] Connecting with model: ${model}...`);
+        console.log(`[Gemini REST] Connecting to model: ${model}...`);
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
         const bodyPayload: any = {
           contents: [{ parts: parts }],
           system_instruction: { parts: [{ text: sysInstruction }] },
           generationConfig: {
-            maxOutputTokens: 150,
+            maxOutputTokens: 200,
             temperature: 0.7
           }
         };
@@ -183,8 +315,11 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(bodyPayload)
+          body: JSON.stringify(bodyPayload),
+          signal: controller.signal
         });
+
+        clearTimeout(timeoutTimer);
 
         const data = await res.json();
 
@@ -201,33 +336,41 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
                 ...prev,
                 { role: 'model', content: `⚙️ [Sistem Aksiyonu]: ${toolResult}` }
               ]);
+              playJarvisSound('success');
             }
           }
           return cleanResponseText(combinedText) || 'İşlem tamamlandı.';
         }
 
         if (data.error) {
-          console.warn(`[Gemini ${model} Error (${data.error.code})]:`, data.error.message);
+          console.warn(`[Gemini ${model} API Error ${data.error.code}]:`, data.error.message);
           lastError = data.error;
-          // If model is busy (503 High Demand), rate limited (429), or not found (404), continue to next model immediately!
+          // Immediate failover to next model for 503, 429, 404, etc.
           continue;
         }
       } catch (err: any) {
-        console.warn(`[Gemini ${model} Network Exception]:`, err);
-        lastError = err;
+        clearTimeout(timeoutTimer);
+        if (err.name === 'AbortError') {
+          console.warn(`[Gemini ${model} Timeout (8s)] Rapid failover to next model...`);
+          lastError = new Error(`Model (${model}) 8 saniye içinde yanıt vermedi.`);
+        } else {
+          console.warn(`[Gemini ${model} Network Exception]:`, err);
+          lastError = err;
+        }
+        continue;
       }
     }
 
     if (lastError) {
       console.error('[Gemini All Models Exhausted]:', lastError);
-      throw new Error(lastError.message || 'Gemini servisleri şu an yoğun, lütfen bir süre sonra tekrar deneyin.');
+      throw new Error(lastError.message || 'Gemini servisleri şu an yoğun, lütfen bağlantınızı veya API anahtarınızı kontrol edin.');
     }
 
     throw new Error('Gemini API yanıt vermedi.');
   };
 
   // Immediate Voice Chat Stop & Interrupt System
-  const stopVoiceChat = () => {
+  const stopVoiceChat = useCallback(() => {
     console.log('[JARVIS] Halting all voice chat and speech output...');
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     if (maxTimeoutRef.current) clearTimeout(maxTimeoutRef.current);
@@ -251,10 +394,10 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
 
     setAudioLevel(0);
     setStatus('idle');
-    playSoundEffect('stop');
-  };
+    playJarvisSound('stop');
+  }, []);
 
-  // Check if spoken command is a direct interruption/silence trigger
+  // Check if spoken text is an interrupt trigger
   const isInterruptCommand = (text: string): boolean => {
     const clean = text.toLowerCase().trim();
     const interruptWords = [
@@ -264,17 +407,45 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
     return interruptWords.some(w => clean === w || clean.startsWith(w + ' ') || clean.endsWith(' ' + w));
   };
 
-  // Fast Real-Time Speech Recognition with Immediate Silence Cutoff (380ms)
+  // Check if spoken text contains Wake Word
+  const checkWakeWord = (text: string): { isWake: boolean; command: string } => {
+    const clean = text.toLowerCase().trim();
+    const wakePatterns = [
+      /^hey\s+jarvis[\s,]*/i,
+      /^ey\s+jarvis[\s,]*/i,
+      /^merhaba\s+jarvis[\s,]*/i,
+      /^jarvis\s+uyan[\s,]*/i,
+      /^jarvis[\s,]*/i,
+      /^cervis[\s,]*/i
+    ];
+
+    for (const pattern of wakePatterns) {
+      if (pattern.test(clean)) {
+        const remaining = clean.replace(pattern, '').trim();
+        return { isWake: true, command: remaining };
+      }
+    }
+
+    if (clean === 'jarvis' || clean === 'hey jarvis' || clean === 'cervis') {
+      return { isWake: true, command: '' };
+    }
+
+    return { isWake: false, command: text };
+  };
+
+  // Fast Real-Time Speech Recognition with Wake Word Detection & 380ms Silence Cutoff
   const startListening = async () => {
     if (!apiKey) {
       setErrorMessage(language === 'tr-TR' ? 'Lütfen önce API anahtarını girin.' : 'Please enter API key first.');
       setStatus('error');
+      playJarvisSound('error');
       return;
     }
 
     if (isMuted) {
       setErrorMessage(language === 'tr-TR' ? 'Mikrofon kapalı (Sessizde). Lütfen önce mikrofonu açın.' : 'Microphone is muted.');
       setStatus('error');
+      playJarvisSound('error');
       return;
     }
     
@@ -288,7 +459,7 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
     }
 
     setErrorMessage('');
-    playSoundEffect('start');
+    playJarvisSound('start');
     setStatus('listening');
     latestTranscriptRef.current = '';
 
@@ -320,14 +491,22 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
 
           const currentWords = (final || interim).trim();
           if (currentWords) {
-            console.log('[JARVIS Real-Time Live Transcript]:', currentWords);
+            console.log('[JARVIS Live Transcript]:', currentWords);
             latestTranscriptRef.current = currentWords;
 
-            // Direct Interrupt Detection: if user says "dur", "sus", "iptal", halt immediately!
+            // 1. Direct Interrupt Detection
             if (isInterruptCommand(currentWords)) {
-              console.log('[JARVIS Interrupt Triggered by Voice]:', currentWords);
+              console.log('[JARVIS Interrupt Triggered]:', currentWords);
               stopVoiceChat();
               return;
+            }
+
+            // 2. Wake Word Detection -> Bring App Window to Front
+            const wakeCheck = checkWakeWord(currentWords);
+            if (wakeCheck.isWake) {
+              console.log('[JARVIS Wake Word Detected! Focusing Window]:', currentWords);
+              focusAppWindow();
+              playJarvisSound('wake');
             }
 
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
@@ -339,7 +518,26 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
               if (textToSend && status === 'listening') {
                 console.log('[JARVIS Fast VAD Executing]:', textToSend);
                 stopListening();
-                await sendTextMessage(textToSend);
+
+                const wakeData = checkWakeWord(textToSend);
+                if (wakeData.isWake) {
+                  focusAppWindow();
+                  if (!wakeData.command) {
+                    // Spoken only "Jarvis" -> Greet and be ready
+                    const reply = language === 'tr-TR' ? 'Dinliyorum efendim, buyrun.' : 'Yes sir, I am listening.';
+                    setConversation(prev => [
+                      ...prev,
+                      { role: 'user', content: textToSend },
+                      { role: 'model', content: reply }
+                    ]);
+                    speakText(reply);
+                    return;
+                  }
+                  // Spoken "Jarvis [command]" -> execute command
+                  await sendTextMessage(wakeData.command);
+                } else {
+                  await sendTextMessage(textToSend);
+                }
               }
             }, debounceMs);
           }
@@ -355,6 +553,15 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
         recognition.onend = () => {
           if (status === 'listening' && !latestTranscriptRef.current) {
             setStatus('idle');
+          }
+          if (isAlwaysListeningRef.current && !isMuted) {
+            setTimeout(() => {
+              try {
+                if (isAlwaysListeningRef.current && status !== 'speaking' && status !== 'processing') {
+                  recognition.start();
+                }
+              } catch(e) {}
+            }, 300);
           }
         };
 
@@ -474,7 +681,7 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
   const stopListening = () => {
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     if (maxTimeoutRef.current) clearTimeout(maxTimeoutRef.current);
-    playSoundEffect('stop');
+    playJarvisSound('stop');
 
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch(e) {}
@@ -591,6 +798,7 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
       console.error('[JARVIS] Audio Gemini Error:', error);
       setStatus('error');
       setErrorMessage(error.message || 'Gemini bağlantı hatası.');
+      playJarvisSound('error');
       setCurrentResponse('');
     }
   };
@@ -627,6 +835,7 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
       console.error('[JARVIS] Text Gemini Error:', error);
       setStatus('error');
       setErrorMessage(error.message || 'Gemini bağlantı hatası.');
+      playJarvisSound('error');
     }
   };
 
@@ -657,6 +866,7 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
       console.error('[JARVIS] Vision Gemini Error:', e);
       setStatus('error');
       setErrorMessage(e.message || 'Kamera/Görsel Hatası.');
+      playJarvisSound('error');
     }
   };
 
@@ -731,6 +941,11 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
           audio.onended = () => {
             setStatus('idle');
             setAudioLevel(0);
+            if (isAlwaysListeningRef.current && !isMuted) {
+              setTimeout(() => {
+                if (isAlwaysListeningRef.current) startListening();
+              }, 400);
+            }
           };
 
           audio.onerror = () => {
@@ -768,6 +983,11 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
       utterance.onend = () => {
         setStatus('idle');
         setAudioLevel(0);
+        if (isAlwaysListeningRef.current && !isMuted) {
+          setTimeout(() => {
+            if (isAlwaysListeningRef.current) startListening();
+          }, 400);
+        }
       };
       utterance.onerror = () => {
         setStatus('idle');
@@ -787,6 +1007,8 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
     currentResponse,
     errorMessage,
     isMuted,
+    isAlwaysListening,
+    toggleAlwaysListening,
     voicePitch,
     setVoicePitch,
     voiceRate,
@@ -797,5 +1019,7 @@ export function useJarvis(apiKey: string, language: JarvisLanguage = 'tr-TR') {
     stopVoiceChat,
     sendTextMessage,
     sendImageToGemini,
+    playJarvisSound,
+    focusAppWindow,
   };
 }

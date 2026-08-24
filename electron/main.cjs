@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu } = require('electron');
 const path = require('path');
 const http = require('http');
 const os = require('os');
@@ -6,6 +6,7 @@ const os = require('os');
 const isDev = process.env.NODE_ENV === 'development';
 
 let mainWindow;
+let tray = null;
 let qrToken = Math.random().toString(36).substring(2, 10);
 const PORT = 3001;
 
@@ -96,6 +97,56 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`[Mobile Server] Running at http://${getLocalIp()}:${PORT}`);
 });
 
+function bringWindowToFront() {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.setAlwaysOnTop(true);
+    mainWindow.focus();
+    setTimeout(() => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.setAlwaysOnTop(false);
+      }
+    }, 300);
+  }
+}
+
+function createTray() {
+  try {
+    const iconPath = path.join(__dirname, 'icon.ico');
+    tray = new Tray(iconPath);
+    const contextMenu = Menu.buildFromTemplate([
+      {
+        label: '🤖 JARVIS 2.0 Aç',
+        click: () => bringWindowToFront()
+      },
+      {
+        label: '🎙️ Dinlemeyi Başlat (Alt+Space)',
+        click: () => {
+          bringWindowToFront();
+          if (mainWindow) mainWindow.webContents.send('trigger-voice-listening');
+        }
+      },
+      { type: 'separator' },
+      {
+        label: 'Çıkış',
+        click: () => {
+          app.isQuitting = true;
+          app.quit();
+        }
+      }
+    ]);
+
+    tray.setToolTip('JARVIS 2.0 — Arka Planda Dinlemede');
+    tray.setContextMenu(contextMenu);
+    tray.on('click', () => {
+      bringWindowToFront();
+    });
+  } catch (e) {
+    console.warn('[Tray Error]:', e);
+  }
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 450,
@@ -107,7 +158,8 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      webSecurity: false
+      webSecurity: false,
+      backgroundThrottling: false
     },
     icon: path.join(__dirname, 'icon.ico'),
     titleBarStyle: 'hidden',
@@ -128,6 +180,11 @@ function createWindow() {
     else mainWindow.maximize();
   });
   ipcMain.on('window-close', () => mainWindow.close());
+  ipcMain.on('show-and-focus-window', () => bringWindowToFront());
+  ipcMain.handle('focus-app', () => {
+    bringWindowToFront();
+    return true;
+  });
 
   // IPC for QR Mobile connection info
   ipcMain.handle('get-qr-info', () => {
@@ -390,6 +447,7 @@ function createWindow() {
 
 app.whenReady().then(() => {
   createWindow();
+  createTray();
 
   // Register Global Hotkey (Alt+Space)
   const { globalShortcut } = require('electron');

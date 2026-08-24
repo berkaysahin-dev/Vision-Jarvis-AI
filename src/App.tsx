@@ -88,6 +88,8 @@ export function App() {
     currentResponse,
     errorMessage,
     isMuted,
+    isAlwaysListening,
+    toggleAlwaysListening,
     voicePitch,
     setVoicePitch,
     voiceRate,
@@ -333,7 +335,14 @@ export function App() {
           bg: 'rgba(0, 122, 255, 0.12)',
           border: 'rgba(0, 122, 255, 0.35)',
           glow: 'rgba(0, 122, 255, 0.6)',
-          icon: '🎙️'
+          icon: (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="23"></line>
+              <line x1="8" y1="23" x2="16" y2="23"></line>
+            </svg>
+          )
         };
       case 'processing':
         return {
@@ -343,7 +352,11 @@ export function App() {
           bg: 'rgba(48, 209, 88, 0.12)',
           border: 'rgba(48, 209, 88, 0.35)',
           glow: 'rgba(48, 209, 88, 0.6)',
-          icon: '⚡'
+          icon: (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+          )
         };
       case 'speaking':
         return {
@@ -353,7 +366,12 @@ export function App() {
           bg: 'rgba(255, 149, 0, 0.12)',
           border: 'rgba(255, 149, 0, 0.35)',
           glow: 'rgba(255, 149, 0, 0.6)',
-          icon: '🔊'
+          icon: (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            </svg>
+          )
         };
       case 'error':
         return {
@@ -363,7 +381,13 @@ export function App() {
           bg: 'rgba(255, 59, 48, 0.15)',
           border: 'rgba(255, 59, 48, 0.4)',
           glow: 'rgba(255, 59, 48, 0.6)',
-          icon: '🔴'
+          icon: (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          )
         };
       default:
         return {
@@ -373,7 +397,11 @@ export function App() {
           bg: 'rgba(0, 240, 255, 0.08)',
           border: 'rgba(0, 240, 255, 0.22)',
           glow: 'rgba(0, 240, 255, 0.4)',
-          icon: '●'
+          icon: (
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="12" cy="12" r="8"></circle>
+            </svg>
+          )
         };
     }
   };
@@ -399,6 +427,31 @@ export function App() {
       </div>
 
       <header className="header" style={{ display: 'flex', gap: '12px', right: showChat ? '350px' : '16px', transition: 'right 0.3s ease', zIndex: 100 }}>
+        {/* Always-On Wake Word (Sürekli Dinleme) Toggle Button */}
+        <button 
+          onClick={toggleAlwaysListening}
+          title={isAlwaysListening ? "Sürekli Dinleme (Wake Word: AÇIK)" : "Sürekli Dinlemeyi Aç (Wake Word: 'Jarvis')"}
+          style={{ 
+            background: isAlwaysListening ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)', 
+            border: isAlwaysListening ? '1px solid rgba(0, 240, 255, 0.5)' : '1px solid rgba(255, 255, 255, 0.08)', 
+            borderRadius: '50%',
+            padding: '6px',
+            color: isAlwaysListening ? '#00f0ff' : 'var(--text-secondary)', 
+            cursor: 'pointer', 
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: isAlwaysListening ? '0 0 12px rgba(0, 240, 255, 0.3)' : 'none'
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" y1="19" x2="12" y2="22"></line>
+          </svg>
+        </button>
+
         {/* Microphone Toggle Mute Button */}
         <button 
           onClick={toggleMute}
@@ -502,7 +555,12 @@ export function App() {
             }}
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
-              🔴 JARVIS Bağlantı Hatası
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              JARVIS Bağlantı Hatası
             </span>
             <span style={{ opacity: 0.8, maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {errorMessage}
@@ -850,22 +908,27 @@ export function App() {
                       Sistem hazır ve dinlemede. Sesli komut verebilir veya aşağıdaki hızlı komutları kullanabilirsiniz.
                     </p>
 
-                    {/* Quick Command Suggestion Chips */}
+                    {/* Quick Command Suggestion Chips with Clean SVG Icons */}
                     <div className="quick-command-grid">
                       <button className="quick-chip" onClick={() => sendTextMessage("Tarayıcıyı aç")}>
-                        <span>🌐</span> Tarayıcıyı Aç
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                        <span>Tarayıcıyı Aç</span>
                       </button>
                       <button className="quick-chip" onClick={handleAnalyzeScreen}>
-                        <span>👁️</span> Ekranı İncele
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                        <span>Ekranı İncele</span>
                       </button>
                       <button className="quick-chip" onClick={() => sendTextMessage("Spotify'ı aç ve müziği başlat")}>
-                        <span>🎵</span> Müziği Başlat
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                        <span>Müziği Başlat</span>
                       </button>
                       <button className="quick-chip" onClick={() => sendTextMessage("Bugünkü hedeflerimi not al")}>
-                        <span>📝</span> Not Ekle
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                        <span>Not Ekle</span>
                       </button>
                       <button className="quick-chip" onClick={() => sendTextMessage("10 dakika sonra bana su içmeyi hatırlat")}>
-                        <span>⏱️</span> Hatırlatıcı Kur
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        <span>Hatırlatıcı Kur</span>
                       </button>
                     </div>
                   </div>
@@ -907,7 +970,10 @@ export function App() {
             onClick={(e) => e.stopPropagation()}
             style={{ maxWidth: '520px', maxHeight: '80vh', overflowY: 'auto' }}
           >
-            <h2 style={{ marginTop: 0, fontSize: '18px', fontWeight: 500, marginBottom: '16px' }}>📝 Sesli Not Defterim</h2>
+            <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: 0, fontSize: '18px', fontWeight: 600, marginBottom: '16px' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00f0ff" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              Sesli Not Defterim
+            </h2>
             
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
               <input 

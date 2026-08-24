@@ -8,11 +8,10 @@ if not exist "node_modules" (
     call npm.cmd install
 )
 
-if not exist "dist\index.html" (
-    echo [JARVIS] Ilk derleme gerceklestiriliyor...
-    call npm.cmd run build
-)
+echo [JARVIS] Guncel kodlar derleniyor...
+call npm.cmd run build
 
 set NODE_ENV=production
 call .\node_modules\.bin\electron.cmd .
 exit
+
