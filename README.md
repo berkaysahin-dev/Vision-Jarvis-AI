@@ -18,40 +18,40 @@
 </p>
 ---
 
-## 🌟 Yeni Nesil Özellikler (JARVIS 2.0)
+## Yeni Nesil Özellikler (JARVIS 2.0)
 
-### 🪐 1. 3D Motion Exploration Görselleştiricisi
+### 1. 3D Motion Exploration Görselleştiricisi
 - **Çok Eksenli Jiroskopik FUI Halkaları:** X, Y, Z uzayında bağımsız dönen neon halkalar ve yörüngesinde süzülen parlayan foton boncukları.
 - **360° Dairesel Ses Ekolayzerı:** Ses giriş ve çıkışına göre dinamik uzayıp kısalan 64 adet 3D radyal spektrum çubuğu.
 - **1200+ Kuantum Parçacık Sarmalı:** Organik sıvı plazma çekirdek etrafında dönen parçacık bulutu.
 
-### 🎙️ 2. Stüdyo Kalitesinde Doğal İnsan Sesi (Neural TTS)
+### 2. Stüdyo Kalitesinde Doğal İnsan Sesi (Neural TTS)
 - **Doğal Türkçe Tonlama:** Standart robotik sesler yerine insansı tonlamalara, nefes aralıklarına sahip **Neural Türkçe Asistan Sesi** (`tr-TR-AhmetNeural`).
 - **Canlı 3D Küre Senkronizasyonu:** Çalınan ses Web Audio Analyser ile 3D küreye bağlanır; JARVIS konuşurken küre ritmik olarak dalgalanır.
 
-### ⚡ 3. Ultra Düşük Gecikmeli Ses Algılama (Sub-300ms)
+### 3. Ultra Düşük Gecikmeli Ses Algılama (Sub-300ms)
 - **Canlı Akışlı STT:** Konuştuğunuz kelimeler ağzınızdan çıktığı an algılanır.
 - **Hızlı VAD (Ses Aktivite Dedektörü):** Cümleniz bittikten yalnızca **380 milisaniye** sonra komut Gemini'ye iletilir.
 - **Düşünme Gecikmesiz Yanıt:** `gemini-2.0-flash` motoru sayesinde anında tek ve net cümlelik Türkçe yanıt üretilir.
 
-### ⏹️ 4. Anında Sesli Sohbeti Durdurma & Araya Girme (Interrupt)
+### ⏹ 4. Anında Sesli Sohbeti Durdurma & Araya Girme (Interrupt)
 - Konuşurken veya dinlerken *"dur"*, *"sus"*, *"jarvis dur"*, *"sohbeti durdur"*, *"iptal"* dediğinizde veya klavyeden `Escape` tuşuna / arayüzdeki **[DURDUR]** butonuna bastığınızda ses ve işlem anında kesilir.
 
-### 📊 5. Gerçek Zamanlı OS Sparkline Performans Grafikleri
+### 5. Gerçek Zamanlı OS Sparkline Performans Grafikleri
 - Son 15 saniyelik CPU ve RAM kullanımını degrade dalga grafikleri (Sparkline) ile canlı çizen modern OS kartı.
 
-### ✨ 6. Modern Tipografi
+### 6. Modern Tipografi
 - **Arayüz Fontu:** `Plus Jakarta Sans`
 - **Teknik/Telemetri Fontu:** `JetBrains Mono`
 
-### 📱 7. Akıllı Uygulama Kontrolü & Mobil Uzaktan Erişim
+### 7. Akıllı Uygulama Kontrolü & Mobil Uzaktan Erişim
 - Chrome, Spotify, VS Code, Not Defteri, Hesap Makinesi gibi uygulamaları sesle veya modern listeden başlatma.
 - Sol kenarda aktif uygulamayı gösteren parlayan **Cyan Aktif Göstergesi**.
 - QR Kod ile cep telefonundan bağlanıp komut gönderebilme.
 
 ---
 
-## 🛠️ Mimari & Teknoloji Yığını
+## Mimari & Teknoloji Yığını
 
 | Bileşen | Teknoloji |
 | :--- | :--- |
@@ -64,7 +64,7 @@
 
 ---
 
-## 🚀 Hızlı Başlangıç & Kurulum
+## Hızlı Başlangıç & Kurulum
 
 ### Gereksinimler
 - **Node.js**: v18.0.0 veya üzeri
@@ -94,19 +94,19 @@
 
 ---
 
-## ⚙️ Yapılandırma
+## Yapılandırma
 1. JARVIS'i açın.
 2. Sağ üstteki **Ayarlar (Dişli)** ikonuna tıklayın.
 3. **Google Gemini API Anahtarınızı** girip kaydedin.
 
 ---
 
-## 🛡️ Marka & Geliştirici
+## Marka & Geliştirici
 
-Geliştirici & Tasarım: **[Shaz Vision](https://shazvision.com)**  
+Geliştirici & Tasarım: **[Shaz Vision](https://shazvision.com)**
 Depo: [github.com/berkaysahin-dev/Vision-Jarvis-AI](https://github.com/berkaysahin-dev/Vision-Jarvis-AI)
 
 ---
 
-## 📄 Lisans
+## Lisans
 Bu proje [MIT Lisansı](LICENSE) altında lisanslanmıştır.
