@@ -1,0 +1,80 @@
+{
+  "name": "vision-jarvis",
+  "version": "2.0.0",
+  "private": false,
+  "description": "JARVIS 2.0 - Native Desktop AI Voice & Vision Assistant powered by Google Gemini and Shaz Agency",
+  "author": "Berkay Şahin <berkay@shazagency.com> (https://shazagency.com)",
+  "license": "MIT",
+  "homepage": "https://shazagency.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/berkaysahin-dev/Vision-Jarvis-AI.git"
+  },
+  "bugs": {
+    "url": "https://github.com/berkaysahin-dev/Vision-Jarvis-AI/issues"
+  },
+  "keywords": [
+    "jarvis",
+    "ai",
+    "gemini",
+    "voice-assistant",
+    "electron",
+    "react",
+    "threejs",
+    "speech-to-text",
+    "desktop-assistant",
+    "shaz-agency"
+  ],
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on tcp:5173 && cross-env NODE_ENV=development electron .\"",
+    "build:exe": "npm run build && electron-builder"
+  },
+  "build": {
+    "appId": "com.vision.jarvis",
+    "productName": "JARVIS",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "public/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ]
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.0.5",
+    "concurrently": "^10.0.4",
+    "cross-env": "^10.1.0",
+    "electron": "^43.4.0",
+    "electron-builder": "^26.15.3",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.0",
+    "vite-plugin-mkcert": "^2.1.0",
+    "wait-on": "^9.1.0"
+  },
+  "dependencies": {
+    "@google/genai": "^2.17.0",
+    "@react-three/drei": "^10.7.8",
+    "@react-three/fiber": "^9.7.0",
+    "framer-motion": "^13.1.0",
+    "msedge-tts": "^2.0.7",
+    "qrcode.react": "^4.2.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "three": "^0.185.1"
+  }
+}
